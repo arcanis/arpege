@@ -1,0 +1,15 @@
+{
+  "version": "2.0.0",
+  "tasks": [{
+    "type": "npm",
+    "script": "build:extension",
+    "path": "extension",
+    "group": {
+      "kind": "build",
+      "isDefault": true
+    },
+    "problemMatcher": [],
+    "label": "yarn build:extension",
+    "detail": "yarn prepack"
+  }]
+}

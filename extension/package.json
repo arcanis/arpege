@@ -1,0 +1,88 @@
+{
+  "name": "supersyntax",
+  "publisher": "arcanis",
+  "version": "0.0.9",
+  "displayName": "SuperSyntax - custom grammars for VSCode",
+  "description": "Adds support for Arpege-powered languages in VSCode",
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@github.com/arcanis/arpege.git",
+    "directory": "extension"
+  },
+  "engines": {
+    "vscode": "^1.67.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./lib/extension.js",
+  "activationEvents": [
+    "onDebug",
+    "onLanguage:supersyntax"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Running SuperSyntax requires generating parsers from the grammar files, which can contain arbitrary JavaScript code"
+    }
+  },
+  "contributes": {
+    "configuration": {
+      "title": "SuperSyntax",
+      "properties": {
+        "supersyntax.parsers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Parsers to enable."
+        }
+      }
+    },
+    "grammars": [
+      {
+        "language": "supersyntax",
+        "scopeName": "source.supersyntax",
+        "path": "./supersyntax.tmGrammar.json",
+        "embeddedLanguages": {
+          "meta.embedded.javascript": "javascript"
+        }
+      }
+    ],
+    "languages": [
+      {
+        "id": "supersyntax",
+        "extensions": [
+          ".stx"
+        ],
+        "aliases": [
+          "SuperSyntax"
+        ],
+        "filenames": [],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "scopes": {
+          "code:js": [
+            "meta.embedded.javascript"
+          ]
+        }
+      }
+    ]
+  },
+  "dependencies": {
+    "arpege": "workspace:*",
+    "tslib": "^2.4.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.67.0",
+    "typescript": "^4.6.4",
+    "vsce": "^2.7.0"
+  },
+  "scripts": {
+    "prepack": "yarn workspace arpege run rollup",
+    "vsix": "yarn prepack && yarn vsce package --yarn"
+  }
+}

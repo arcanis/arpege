@@ -1,0 +1,120 @@
+{
+  "scopeName": "source.supersyntax",
+  "fileTypes": [
+    "supersyntax"
+  ],
+  "name": "SuperSyntax File",
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#string"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "patterns": [
+        {
+          "begin": "/\\*",
+          "end": "\\*/",
+          "name": "comment.block.supersyntax"
+        },
+        {
+          "match": "//.*$\\n?",
+          "name": "comment.line.double-slash.supersyntax"
+        }
+      ]
+    },
+		"string": {
+			"patterns": [
+				{
+					"include": "#qstring-single"
+				},
+				{
+					"include": "#qstring-double"
+				},
+				{
+					"include": "#template"
+				}
+			]
+		},
+		"qstring-double": {
+			"name": "string.quoted.double.supersyntax",
+			"begin": "\"",
+			"beginCaptures": {
+				"0": {
+					"name": "punctuation.definition.string.begin.supersyntax"
+				}
+			},
+			"end": "(\")|((?:[^\\\\\\n])$)",
+			"endCaptures": {
+				"1": {
+					"name": "punctuation.definition.string.end.supersyntax"
+				},
+				"2": {
+					"name": "invalid.illegal.newline.supersyntax"
+				}
+			},
+			"patterns": [
+				{
+					"include": "#string-character-escape"
+				}
+			]
+		},
+		"qstring-single": {
+			"name": "string.quoted.single.supersyntax",
+			"begin": "'",
+			"beginCaptures": {
+				"0": {
+					"name": "punctuation.definition.string.begin.supersyntax"
+				}
+			},
+			"end": "(\\')|((?:[^\\\\\\n])$)",
+			"endCaptures": {
+				"1": {
+					"name": "punctuation.definition.string.end.supersyntax"
+				},
+				"2": {
+					"name": "invalid.illegal.newline.supersyntax"
+				}
+			},
+			"patterns": [
+				{
+					"include": "#string-character-escape"
+				}
+			]
+		},
+		"string-character-escape": {
+			"name": "constant.character.escape.supersyntax",
+			"match": "\\\\(x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|u\\{[0-9A-Fa-f]+\\}|[0-2][0-7]{0,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.|$)"
+		},
+		"template": {
+			"patterns": [
+				{
+					"include": "#template-call"
+				},
+				{
+					"name": "string.template.supersyntax",
+					"begin": "`",
+					"beginCaptures": {
+						"0": {
+							"name": "punctuation.definition.string.template.begin.supersyntax"
+						}
+					},
+					"end": "`",
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.definition.string.template.end.supersyntax"
+						}
+					},
+					"patterns": [
+						{
+							"include": "#string-character-escape"
+						}
+					]
+				}
+			]
+		}
+  }
+}

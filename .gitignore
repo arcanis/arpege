@@ -1,3 +1,7 @@
-browser/*
-examples/*.js
-node_modules/*
+.yarn/*
+!.yarn/releases
+!.yarn/sdks
+
+lib
+*.vsix
+.DS_Store
