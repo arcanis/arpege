@@ -5,7 +5,7 @@
 describe("compiler pass |reportInfiniteRepetition|", function() {
   var pass = peg.compiler.passes.check.reportInfiniteRepetition;
 
-  it("reports infinite loops for zero_or_more", function() {
+  it("reports infinite loops for zeroOrMore", function() {
     expect(pass).toReportError('start = ("")*', {
       message:  "Possible infinite loop when parsing (repetition used with an expression that may not consume any input).",
       location: {
@@ -15,7 +15,7 @@ describe("compiler pass |reportInfiniteRepetition|", function() {
     });
   });
 
-  it("reports infinite loops for one_or_more", function() {
+  it("reports infinite loops for oneOrMore", function() {
     expect(pass).toReportError('start = ("")+', {
       message:  "Possible infinite loop when parsing (repetition used with an expression that may not consume any input).",
       location: {

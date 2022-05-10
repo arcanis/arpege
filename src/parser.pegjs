@@ -26,19 +26,19 @@
 {
   var OPS_TO_PREFIXED_TYPES = {
     "$": "text",
-    "&": "simple_and",
-    "!": "simple_not"
+    "&": "simpleAnd",
+    "!": "simpleNot"
   };
 
   var OPS_TO_SUFFIXED_TYPES = {
     "?": "optional",
-    "*": "zero_or_more",
-    "+": "one_or_more"
+    "*": "zeroOrMore",
+    "+": "oneOrMore"
   };
 
   var OPS_TO_SEMANTIC_PREDICATE_TYPES = {
-    "&": "semantic_and",
-    "!": "semantic_not"
+    "&": "semanticAnd",
+    "!": "semanticNot"
   };
 
   function filterEmptyStrings(array) {
@@ -208,7 +208,7 @@ PrimaryExpression
 
 RuleReferenceExpression
   = name:IdentifierName !(__ (StringLiteral __)? "=") {
-      return { type: "rule_ref", name: name, location: location() };
+      return { type: "ruleRef", name: name, location: location() };
     }
 
 SemanticPredicateExpression

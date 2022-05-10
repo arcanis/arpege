@@ -7,15 +7,15 @@ describe("PEG.js grammar parser", function() {
       literalEfgh       = { type: "literal",      value: "efgh", ignoreCase: false },
       literalIjkl       = { type: "literal",      value: "ijkl", ignoreCase: false },
       literalMnop       = { type: "literal",      value: "mnop", ignoreCase: false },
-      semanticAnd       = { type: "semantic_and", code: " code " },
-      semanticNot       = { type: "semantic_not", code: " code " },
+      semanticAnd       = { type: "semanticAnd", code: " code " },
+      semanticNot       = { type: "semanticNot", code: " code " },
       optional          = { type: "optional",     expression: literalAbcd },
-      zeroOrMore        = { type: "zero_or_more", expression: literalAbcd },
-      oneOrMore         = { type: "one_or_more",  expression: literalAbcd },
+      zeroOrMore        = { type: "zeroOrMore", expression: literalAbcd },
+      oneOrMore         = { type: "oneOrMore",  expression: literalAbcd },
       textOptional      = { type: "text",         expression: optional    },
-      simpleNotAbcd     = { type: "simple_not",   expression: literalAbcd },
-      simpleAndOptional = { type: "simple_and",   expression: optional    },
-      simpleNotOptional = { type: "simple_not",   expression: optional    },
+      simpleNotAbcd     = { type: "simpleNot",   expression: literalAbcd },
+      simpleAndOptional = { type: "simpleAnd",   expression: optional    },
+      simpleNotOptional = { type: "simpleNot",   expression: optional    },
       labeledAbcd       = { type: "labeled",      label: "a", expression: literalAbcd   },
       labeledEfgh       = { type: "labeled",      label: "b", expression: literalEfgh   },
       labeledIjkl       = { type: "labeled",      label: "c", expression: literalIjkl   },
@@ -93,7 +93,7 @@ describe("PEG.js grammar parser", function() {
   }
 
   function ruleRefGrammar(name) {
-    return oneRuleGrammar({ type: "rule_ref", name: name });
+    return oneRuleGrammar({ type: "ruleRef", name: name });
   }
 
   var trivialGrammar = literalGrammar("abcd", false),
@@ -155,15 +155,15 @@ describe("PEG.js grammar parser", function() {
       sequence:     stripChildren("elements"),
       labeled:      stripExpression,
       text:         stripExpression,
-      simple_and:   stripExpression,
-      simple_not:   stripExpression,
+      simpleAnd:   stripExpression,
+      simpleNot:   stripExpression,
       optional:     stripExpression,
-      zero_or_more: stripExpression,
-      one_or_more:  stripExpression,
+      zeroOrMore: stripExpression,
+      oneOrMore:  stripExpression,
       group:        stripExpression,
-      semantic_and: stripLeaf,
-      semantic_not: stripLeaf,
-      rule_ref:     stripLeaf,
+      semanticAnd: stripLeaf,
+      semanticNot: stripLeaf,
+      ruleRef:     stripLeaf,
       literal:      stripLeaf,
       "class":      stripLeaf,
       any:          stripLeaf

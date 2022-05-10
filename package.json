@@ -48,13 +48,18 @@
     "test": "make lint && make spec"
   },
   "devDependencies": {
+    "@types/node": "^17.0.31",
+    "@yarnpkg/eslint-config": "^1.0.0-rc.5",
     "browserify": "13.1.0",
-    "eslint": "2.13.1",
+    "eslint": "^8.15.0",
     "http-server": "0.9.0",
     "jasmine-node": "1.14.5",
+    "ts-node": "^10.7.0",
+    "typescript": "^4.6.4",
     "uglify-js": "2.7.0"
   },
   "engines": {
     "node": ">=0.10"
-  }
+  },
+  "packageManager": "yarn@4.0.0-rc.5"
 }
