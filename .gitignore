@@ -3,3 +3,5 @@
 !.yarn/sdks
 
 lib
+*.vsix
+.DS_Store
