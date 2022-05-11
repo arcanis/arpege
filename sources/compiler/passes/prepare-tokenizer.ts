@@ -33,7 +33,7 @@ export function prepareTokenizer(ast: asts.Ast, options: CompileOptions) {
     },
   }));
 
-  visitor.run(ast, () => ({
+  visitor.run(ast, visit => ({
     named(node) {
       node.expression = wrapWithAction(node.name, node.expression);
     },
@@ -41,15 +41,19 @@ export function prepareTokenizer(ast: asts.Ast, options: CompileOptions) {
       Object.assign(node, wrapWithAction(`syntax`, node));
     },
     optional(node) {
+      const copy = {...node};
+
       Object.assign(node, {
         type: `action`,
         code: `return val ?? []`,
         expression: {
           type: `labeled`,
           label: `val`,
-          expression: {...node},
+          expression: copy,
         },
       });
+
+      visit(copy.expression);
     },
   }));
 }

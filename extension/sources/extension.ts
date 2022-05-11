@@ -75,7 +75,7 @@ export function activate(context: vscode.ExtensionContext) {
       const tokens = parser.parse(document.getText()).flat(Infinity);
 
       for (const token of tokens) {
-        if (!token || token.type === `whitespace`)
+        if (!token)
           continue;
 
         if (token.type === `syntax`) {
