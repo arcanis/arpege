@@ -1,0 +1,77 @@
+{
+  "name": "supersyntax",
+  "displayName": "Supersyntax",
+  "description": "Adds support for PEG.js-powered languages in VSCode",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.67.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./lib/extension.js",
+  "activationEvents": [
+    "*"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "SuperSyntax",
+      "properties": {
+        "supersyntax.parsers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Parsers to enable."
+        }
+      }
+    },
+    "grammars": [
+      {
+        "language": "supersyntax",
+        "scopeName": "source.supersyntax",
+        "path": "./supersyntax.tmGrammar.json",
+        "embeddedLanguages": {
+          "meta.embedded.javascript": "javascript"
+        }
+      }
+    ],
+    "languages": [
+      {
+        "id": "supersyntax",
+        "extensions": [
+          ".stx"
+        ],
+        "aliases": [
+          "SuperSyntax"
+        ],
+        "filenames": [],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "scopes": {
+          "code:js": ["meta.embedded.javascript"]
+        }
+      }
+    ]
+},
+  "dependencies": {
+    "pegjs": "workspace:*",
+    "tslib": "^2.4.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-alias": "^3.1.9",
+    "@rollup/plugin-typescript": "^8.3.2",
+    "@types/vscode": "^1.67.0",
+    "rollup": "^2.72.1",
+    "rollup-plugin-pegjs": "^2.1.3",
+    "typescript": "^4.6.4"
+  },
+  "scripts": {
+    "build:extension": "yarn prepack",
+    "prepack": "yarn rollup -c",
+    "postpack": "rm -rf lib"
+  }
+}

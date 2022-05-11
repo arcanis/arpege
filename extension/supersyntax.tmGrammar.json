@@ -1,0 +1,37 @@
+{
+  "scopeName": "source.supersyntax",
+  "fileTypes": [
+    "supersyntax"
+  ],
+  "name": "SuperSyntax File",
+  "patterns": [
+    {
+      "include": "#comment"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "patterns": [
+        {
+          "begin": "/\\*",
+          "end": "\\*/",
+          "name": "comment.block.supersyntax"
+        },
+        {
+          "match": "//.*$\\n?",
+          "name": "comment.line.double-slash.supersyntax"
+        }
+      ]
+    },
+    "inlinejs": {
+      "begin": "{",
+      "end": "}",
+      "name": "meta.embedded.block.javascript",
+      "patterns": [
+        {
+          "include": "source.js"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [{
+    "name": "Run Extension",
+    "type": "extensionHost",
+    "request": "launch",
+    "args": [
+      "--disable-extensions",
+      "--extensionDevelopmentPath=${workspaceFolder}/extension",
+      "${workspaceFolder}/examples"
+    ],
+    "outFiles": [
+      "${workspaceFolder}/extension/lib/**/*.js"
+    ],
+    "resolveSourceMapLocations": [
+      "${workspaceFolder}/extension/lib/**",
+      "!**/node_modules/**"
+    ]
+  }]
+}
