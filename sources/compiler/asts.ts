@@ -1,7 +1,7 @@
-import {GrammarError} from '../grammar-error';
+import {GrammarError}     from '../grammar-error';
 
-import {Bytecode}     from './passes/generate-bytecode';
-import {visitor}      from './visitor';
+import {Bytecode}         from './passes/generate-bytecode';
+import {VisitFn, visitor} from './visitor';
 
 export type Position = {
   offset: number;
@@ -14,140 +14,141 @@ export type Location = {
   end: Position;
 };
 
-export type Action = {
+export type Annotation = {
+  name: string;
+  parameters: Record<string, any>;
+};
+
+export type NodeBase = {
+  annotations?: Array<Annotation>;
+  location?: Location;
+};
+
+export type Action = NodeBase & {
   type: `action`;
   expression: Expression;
   code: string;
-  location: Location;
 };
 
-export type Any = {
+export type Any = NodeBase & {
   type: `any`;
-  location: Location;
 };
 
-export type Choice = {
+export type Choice = NodeBase & {
   type: `choice`;
   alternatives: Array<Expression>;
-  location: Location;
 };
 
-export type Class = {
+export type Class = NodeBase & {
   type: `class`;
   parts: Array<string | [string, string]>;
   inverted: boolean;
   ignoreCase: boolean;
-  location: Location;
 };
 
-export type Group = {
+export type Group = NodeBase & {
   type: `group`;
   expression: Expression;
-  location: Location;
 };
 
-export type Initializer = {
+export type Initializer = NodeBase & {
   type: `initializer`;
   code: string;
-  location: Location;
 };
 
-export type Literal = {
+export type Literal = NodeBase & {
   type: `literal`;
   value: string;
   ignoreCase: boolean;
-  location: Location;
 };
 
-export type Named = {
+export type Named = NodeBase & {
   type: `named`;
   name: string;
   expression: Expression;
-  location: Location;
 };
 
-export type RuleRef = {
+export type RuleRef = NodeBase & {
   type: `ruleRef`;
   name: string;
-  location: Location;
 };
 
-export type Rule = {
+export type Rule = NodeBase & {
   type: `rule`;
   name: string;
   expression: Expression;
   bytecode?: Bytecode;
-  location: Location;
 };
 
-export type Sequence = {
+export type Scope = NodeBase & {
+  type: `scope`;
+  expression: Expression;
+  code: string;
+};
+
+export type Sequence = NodeBase & {
   type: `sequence`;
   elements: Array<Expression>;
-  location: Location;
 };
 
-export type Labeled = {
+export type Transform = NodeBase & {
+  type: `transform`;
+  code: string;
+  expression: Expression;
+};
+
+export type Labeled = NodeBase & {
   type: `labeled`;
   label: string;
   expression: Expression;
-  location: Location;
 };
 
-export type OneOrMore = {
+export type OneOrMore = NodeBase & {
   type: `oneOrMore`;
   expression: Expression;
-  location: Location;
 };
 
-export type Optional = {
+export type Optional = NodeBase & {
   type: `optional`;
   expression: Expression;
-  location: Location;
 };
 
-export type SimpleAnd = {
+export type SimpleAnd = NodeBase & {
   type: `simpleAnd`;
   expression: Expression;
-  location: Location;
 };
 
-export type SimpleNot = {
+export type SimpleNot = NodeBase & {
   type: `simpleNot`;
   expression: Expression;
-  location: Location;
 };
 
-export type SemanticAnd = {
+export type SemanticAnd = NodeBase & {
   type: `semanticAnd`;
   code: string;
-  location: Location;
 };
 
-export type SemanticNot = {
+export type SemanticNot = NodeBase & {
   type: `semanticNot`;
   code: string;
-  location: Location;
 };
 
-export type ZeroOrMore = {
+export type ZeroOrMore = NodeBase & {
   type: `zeroOrMore`;
   expression: Expression;
-  location: Location;
 };
 
-export type Text = {
+export type Text = NodeBase & {
   type: `text`;
   expression: Expression;
-  location: Location;
 };
 
-export type Ast = {
+export type Ast = NodeBase & {
   type: `grammar`;
   initializer: Initializer | null;
   rules: Array<Rule>;
   consts?: Array<string>;
   code?: string;
-  location: Location;
 };
 
 export type Expression =
@@ -162,12 +163,14 @@ export type Expression =
   | OneOrMore
   | Optional
   | RuleRef
+  | Scope
   | Sequence
   | SemanticAnd
   | SemanticNot
   | SimpleAnd
   | SimpleNot
   | Text
+  | Transform
   | ZeroOrMore;
 
 export type Node =
@@ -175,6 +178,10 @@ export type Node =
   | Expression
   | Initializer
   | Rule;
+
+export function node<T extends Node>(node: T) {
+  return node;
+}
 
 export type NodeWithExpression = Extract<Node, {
   expression: Expression;
@@ -194,29 +201,32 @@ export function indexOfRule(ast: Ast, name: string) {
 }
 
 export function alwaysConsumesOnSuccess(ast: Ast, node: Node) {
-  function consumesTrue()  {
+  function consumesTrue() {
     return true;
   }
+
   function consumesFalse() {
     return false;
   }
 
-  function consumesExpression(node: NodeWithExpression) {
-    return consumes(node.expression);
+  function consumesExpression(visit: VisitFn, node: NodeWithExpression) {
+    return visit(node.expression);
   }
 
-  const consumes = visitor.build({
+  return visitor.run(node, {
     rule: consumesExpression,
     named: consumesExpression,
 
-    choice(node) {
-      return node.alternatives.every(alternative => consumes(alternative));
+    choice(visit, node) {
+      return node.alternatives.every(alternative => visit(alternative));
     },
 
     action: consumesExpression,
+    scope: consumesExpression,
+    transform: consumesExpression,
 
-    sequence(node) {
-      return node.elements.some(element => consumes(element));
+    sequence(visit, node) {
+      return node.elements.some(element => visit(element));
     },
 
     labeled: consumesExpression,
@@ -230,7 +240,7 @@ export function alwaysConsumesOnSuccess(ast: Ast, node: Node) {
     semanticAnd: consumesFalse,
     semanticNot: consumesFalse,
 
-    ruleRef(node) {
+    ruleRef(visit, node) {
       const targetRule = findRule(ast, node.name);
 
       if (typeof targetRule === `undefined`) {
@@ -240,16 +250,14 @@ export function alwaysConsumesOnSuccess(ast: Ast, node: Node) {
         );
       }
 
-      return consumes(targetRule);
+      return visit(targetRule);
     },
 
-    literal(node) {
+    literal(visit, node) {
       return node.value !== ``;
     },
 
     class: consumesTrue,
     any: consumesTrue,
   });
-
-  return consumes(node);
 }

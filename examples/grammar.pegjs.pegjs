@@ -14,7 +14,7 @@
  *     handling.
  *
  *   * One can create identifiers containing illegal characters using Unicode
- *     escape sequences. For example, "abcd\u0020efgh" is not a valid
+ *     escape sequences. For example, `abcd\u0020efgh` is not a valid
  *     identifier, but it is accepted by the parser.
  *
  * Both limitations could be resolved, but the costs would likely outweigh
@@ -24,31 +24,29 @@
  */
 
 {
-  var OPS_TO_PREFIXED_TYPES = {
-    "$": "text",
-    "&": "simpleAnd",
-    "!": "simpleNot"
+  const OPS_TO_PREFIXED_TYPES = {
+    [`$`]: `text`,
+    [`&`]: `simpleAnd`,
+    [`!`]: `simpleNot`,
   };
 
-  var OPS_TO_SUFFIXED_TYPES = {
-    "?": "optional",
-    "*": "zeroOrMore",
-    "+": "oneOrMore"
+  const OPS_TO_SUFFIXED_TYPES = {
+    [`?`]: `optional`,
+    [`*`]: `zeroOrMore`,
+    [`+`]: `oneOrMore`,
   };
 
-  var OPS_TO_SEMANTIC_PREDICATE_TYPES = {
-    "&": "semanticAnd",
-    "!": "semanticNot"
+  const OPS_TO_SEMANTIC_PREDICATE_TYPES = {
+    [`&`]: `semanticAnd`,
+    [`!`]: `semanticNot`,
   };
 
   function filterEmptyStrings(array) {
-    var result = [], i;
+    const result = [];
 
-    for (i = 0; i < array.length; i++) {
-      if (array[i] !== "") {
+    for (let i = 0; i < array.length; i++)
+      if (array[i] !== ``)
         result.push(array[i]);
-      }
-    }
 
     return result;
   }
@@ -58,11 +56,10 @@
   }
 
   function extractList(list, index) {
-    var result = new Array(list.length), i;
+    const result = new Array(list.length);
 
-    for (i = 0; i < list.length; i++) {
+    for (let i = 0; i < list.length; i++)
       result[i] = list[i][index];
-    }
 
     return result;
   }
@@ -77,83 +74,98 @@
 Grammar
   = __ initializer:(Initializer __)? rules:(Rule __)+ {
       return {
-        type:        "grammar",
+        type: `grammar`,
+        location: location(),
         initializer: extractOptional(initializer, 0),
-        rules:       extractList(rules, 0),
-        location:    location()
+        rules: extractList(rules, 0),
       };
     }
 
 Initializer
   = code:CodeBlock EOS {
-      return { type: "initializer", code: code, location: location() };
+      return {
+        type: `initializer`,
+        location: location(),
+        code: code,
+      };
     }
 
 Rule
-  = name:RuleIdentifier __
-    displayName:(StringLiteral __)?
-    "=" __
-    expression:Expression EOS
-    {
+  = name:(@token(type: `class`) IdentifierName)
+    __ displayName:(StringLiteral __)? `=` __
+    expression:Expression EOS {
       return {
-        type:        "rule",
-        name:        name,
-        expression:  displayName !== null
-          ? {
-              type:       "named",
-              name:       displayName[0],
-              expression: expression,
-              location:   location()
-            }
-          : expression,
-        location:    location()
+        type: `rule`,
+        location: location(),
+        name: name,
+        expression: displayName === null ? expression : {
+          type: `named`,
+          location: location(),
+          name: displayName[0],
+          expression,
+        },
       };
     }
 
 Expression
-  = ChoiceExpression
+  = annotations:(@separator(expr: __) Annotation*) __ expression:LeadingChoiceExpression {
+      return annotations.length === 0 ? expression : Object.assign(expression, {
+        annotations,
+      });
+    }
+
+LeadingChoiceExpression
+  = `/`? __ expression:ChoiceExpression {
+      return expression;
+    }
 
 ChoiceExpression
-  = head:ActionExpression tail:(__ "/" __ ActionExpression)* {
-      return tail.length > 0
-        ? {
-            type:         "choice",
-            alternatives: buildList(head, tail, 3),
-            location:     location()
-          }
-        : head;
+  = alternatives:(@separator(expr: __ `/` __) ScopeExpression+) {
+      return alternatives.length === 1 ? alternatives[0] : {
+        type: `choice`,
+        location: location(),
+        alternatives,
+      };
     }
+
+ScopeExpression
+  = expression:ActionExpression __ `^` __ code:CodeBlock {
+      return {
+        type: `scope`,
+        location: location(),
+        expression: expression,
+        code: code[1],
+      };
+    }
+  / ActionExpression
 
 ActionExpression
   = expression:SequenceExpression code:(__ CodeBlock)? {
-      return code !== null
-        ? {
-            type:       "action",
-            expression: expression,
-            code:       code[1],
-            location:   location()
-          }
-        : expression;
+      return code === null ? expression : {
+        type: `action`,
+        location: location(),
+        expression: expression,
+        code: code[1],
+      };
     }
 
 SequenceExpression
-  = head:LabeledExpression tail:(__ LabeledExpression)* {
-      return tail.length > 0
-        ? {
-            type:     "sequence",
-            elements: buildList(head, tail, 1),
-            location: location()
-          }
-        : head;
+  = elements:(@separator(expr: __) LabeledExpression+) {
+      return elements.length === 1 ? elements[0] : {
+        type: `sequence`,
+        location: location(),
+        elements,
+      };
     }
 
 LabeledExpression
-  = label:Variable __ ":" __ expression:PrefixedExpression {
+  = label:(@token(type: `variable`) Identifier)
+    __ `:` __ expression:PrefixedExpression {
       return {
-        type:       "labeled",
-        label:      label,
-        expression: expression,
-        location:   location()
+        type: `labeled`,
+        location: location(),
+        label,
+        expression,
       };
     }
   / PrefixedExpression
@@ -161,32 +173,34 @@ LabeledExpression
 PrefixedExpression
   = operator:PrefixedOperator __ expression:SuffixedExpression {
       return {
-        type:       OPS_TO_PREFIXED_TYPES[operator],
-        expression: expression,
-        location:   location()
+        type: OPS_TO_PREFIXED_TYPES[operator],
+        location: location(),
+        expression,
       };
     }
   / SuffixedExpression
 
 PrefixedOperator
-  = "$"
-  / "&"
-  / "!"
+  = `$`
+  / `&`
+  / `!`
 
 SuffixedExpression
   = expression:PrimaryExpression __ operator:SuffixedOperator {
       return {
-        type:       OPS_TO_SUFFIXED_TYPES[operator],
-        expression: expression,
-        location:   location()
+        type: OPS_TO_SUFFIXED_TYPES[operator],
+        location: location(),
+        expression,
       };
     }
   / PrimaryExpression
 
 SuffixedOperator
-  = "?"
-  / "*"
-  / "+"
+  = @token(type: `regexp`) (
+      / `?`
+      / `*`
+      / `+`
+    )
 
 PrimaryExpression
   = LiteralMatcher
@@ -194,98 +208,98 @@ PrimaryExpression
   / AnyMatcher
   / RuleReferenceExpression
   / SemanticPredicateExpression
-  / "(" __ expression:Expression __ ")" {
+  / `(` __ expression:Expression __ `)` {
       /*
-       * The purpose of the "group" AST node is just to isolate label scope. We
-       * don't need to put it around nodes that can't contain any labels or
+       * The purpose of the `group` AST node is just to isolate label scope. We
+       * don`t need to put it around nodes that can`t contain any labels or
        * nodes that already isolate label scope themselves. This leaves us with
-       * "labeled" and "sequence".
+       * `labeled` and `sequence`.
        */
-      return expression.type === 'labeled' || expression.type === 'sequence'
-          ? { type: "group", expression: expression }
+      return expression.type === `labeled` || expression.type === `sequence`
+          ? { type: `group`, expression: expression }
           : expression;
     }
 
 RuleReferenceExpression
-  = name:RuleIdentifier !(__ (StringLiteral __)? "=") {
-      return { type: "ruleRef", name: name, location: location() };
+  = name:(@token(type: `function`) IdentifierName) !(__ (StringLiteral __)? `=`) {
+      return {
+        type: `ruleRef`,
+        location: location(),
+        name,
+      };
     }
 
 SemanticPredicateExpression
   = operator:SemanticPredicateOperator __ code:CodeBlock {
       return {
-        type:     OPS_TO_SEMANTIC_PREDICATE_TYPES[operator],
-        code:     code,
-        location: location()
+        type: OPS_TO_SEMANTIC_PREDICATE_TYPES[operator],
+        location: location(),
+        code,
       };
     }
 
 SemanticPredicateOperator
-  = "&"
-  / "!"
+  = `&`
+  / `!`
 
 /* ---- Lexical Grammar ----- */
 
 SourceCharacter
   = .
 
-WhiteSpace "whitespace"
-  = "\t"
-  / "\v"
-  / "\f"
-  / " "
-  / "\u00A0"
-  / "\uFEFF"
+WhiteSpace `whitespace`
+  = `\t`
+  / `\v`
+  / `\f`
+  / ` `
+  / `\u00A0`
+  / `\uFEFF`
   / Zs
 
 LineTerminator
   = [\n\r\u2028\u2029]
 
-LineTerminatorSequence "end of line"
-  = "\n"
-  / "\r\n"
-  / "\r"
-  / "\u2028"
-  / "\u2029"
+LineTerminatorSequence `end of line`
+  = `\n`
+  / `\r\n`
+  / `\r`
+  / `\u2028`
+  / `\u2029`
 
-Comment "comment"
-  = MultiLineComment
-  / SingleLineComment
+Comment `comment`
+  = @token(type: `comment`) (
+      / MultiLineComment
+      / SingleLineComment
+    )
 
 MultiLineComment
-  = "/*" (!"*/" SourceCharacter)* "*/"
+  = `/*` (!`*/` SourceCharacter)* `*/`
 
 MultiLineCommentNoLineTerminator
-  = "/*" (!("*/" / LineTerminator) SourceCharacter)* "*/"
+  = `/*` (!(`*/` / LineTerminator) SourceCharacter)* `*/`
 
 SingleLineComment
-  = "//" (!LineTerminator SourceCharacter)*
-
-Variable "variable"
-  = Identifier
-
-RuleIdentifier "function"
-  = IdentifierName
+  = `//` (!LineTerminator SourceCharacter)*
 
 Identifier
   = !ReservedWord name:IdentifierName { return name; }
 
-IdentifierName "identifier"
-  = head:IdentifierStart tail:IdentifierPart* { return head + tail.join(""); }
+IdentifierName `identifier`
+  = head:IdentifierStart tail:IdentifierPart* { return head + tail.join(``); }
 
 IdentifierStart
   = UnicodeLetter
-  / "$"
-  / "_"
-  / "\\" sequence:UnicodeEscapeSequence { return sequence; }
+  / `$`
+  / `_`
+  / `\\` sequence:UnicodeEscapeSequence { return sequence; }
 
 IdentifierPart
   = IdentifierStart
   / UnicodeCombiningMark
   / UnicodeDigit
   / UnicodeConnectorPunctuation
-  / "\u200C"
-  / "\u200D"
+  / `\u200C`
+  / `\u200D`
 
 UnicodeLetter
   = Lu
@@ -355,68 +369,110 @@ BooleanLiteral
   = TrueToken
   / FalseToken
 
-LiteralMatcher
-  = value:StringLiteral ignoreCase:"i"? {
+Annotation
+  = name:(@token(type: `decorator`) `@` name:Identifier `(` { return name })
+    parameters:(__ parameters:AnnotationParameters? __ { return parameters })?
+    (@token(type: `decorator`) `)`) {
       return {
-        type:       "literal",
-        value:      value,
-        ignoreCase: ignoreCase !== null,
-        location:   location()
+        name,
+        parameters: parameters ?? {}
       };
     }
 
-StringLiteral "string"
-  = '"' chars:DoubleStringCharacter* '"' { return chars.join(""); }
-  / "'" chars:SingleStringCharacter* "'" { return chars.join(""); }
+AnnotationParameters
+  = parameterList:(@separator(expr: __ `,` __) AnnotationParameter*) {
+      return Object.fromEntries(parameterList);
+    }
 
-DoubleStringCharacter
-  = !('"' / "\\" / LineTerminator) SourceCharacter { return text(); }
-  / "\\" sequence:EscapeSequence { return sequence; }
+AnnotationParameter
+  = name:(@token(type: `parameter`) Identifier) &{ return name === `expr` || name.endsWith(`Expr`) } __ `:` __ expression:Expression {
+      return [name, expression];
+    }
+  / name:(@token(type: `parameter`) Identifier) __ `:`__ value:ValueLiteral {
+      return [name, value];
+    }
+
+LiteralMatcher
+  = value:StringLiteral ignoreCase:`i`? {
+      return {
+        type: `literal`,
+        location: location(),
+        ignoreCase: ignoreCase !== null,
+        value,
+      };
+    }
+
+ValueLiteral
+  = StringLiteral
+  / ArrayLiteral
+  / BooleanLiteral { return JSON.parse(text()) }
+  / NullLiteral { return null }
+
+ArrayLiteral `array`
+  = `[` values:ArrayValues? `]` { return values ?? [] }
+
+ArrayValues
+  = @separator(expr: __ `,` __)
+    ValueLiteral*
+
+StringLiteral `string`
+  = @token(type: `string`) (
+      / '`' chars:BacktickStringCharacter* '`' { return chars.join(``) }
+      / `"` chars:DoubleStringCharacter* `"` { return chars.join(``) }
+      / `'` chars:SingleStringCharacter* `'` { return chars.join(``) }
+    )
+
+BacktickStringCharacter
+  = !('`' / `\\` / LineTerminator) SourceCharacter { return text() }
+  / `\\` sequence:EscapeSequence { return sequence }
+  / LineContinuation
+
+DoubleStringCharacter `s(v)b`
+  = !(`"` / `\\` / LineTerminator) SourceCharacter { return text() }
+  / `\\` sequence:EscapeSequence { return sequence }
   / LineContinuation
 
 SingleStringCharacter
-  = !("'" / "\\" / LineTerminator) SourceCharacter { return text(); }
-  / "\\" sequence:EscapeSequence { return sequence; }
+  = !(`'` / `\\` / LineTerminator) SourceCharacter { return text() }
+  / `\\` sequence:EscapeSequence { return sequence }
   / LineContinuation
 
-CharacterClassMatcher "regexp"
-  = "["
-    inverted:"^"?
-    parts:(ClassCharacterRange / ClassCharacter)*
-    "]"
-    ignoreCase:"i"?
-    {
-      return {
-        type:       "class",
-        parts:      filterEmptyStrings(parts),
-        inverted:   inverted !== null,
-        ignoreCase: ignoreCase !== null,
-        location:   location()
-      };
-    }
+CharacterClassMatcher `regexp`
+  = @token(type: `regexp`) (
+      `[`
+      inverted:`^`?
+      parts:(ClassCharacterRange / ClassCharacter)*
+      `]`
+      ignoreCase:`i`? {
+        return {
+          type: `class`,
+          location: location(),
+          parts: filterEmptyStrings(parts),
+          inverted: inverted !== null,
+          ignoreCase: ignoreCase !== null,
+        };
+      }
+    )
 
 ClassCharacterRange
-  = begin:ClassCharacter "-" end:ClassCharacter {
-      if (begin.charCodeAt(0) > end.charCodeAt(0)) {
-        error(
-          "Invalid character range: " + text() + "."
-        );
-      }
+  = begin:ClassCharacter `-` end:ClassCharacter {
+      if (begin.charCodeAt(0) > end.charCodeAt(0))
+        error(`Invalid character range: ${text()}.`);
 
       return [begin, end];
     }
 
 ClassCharacter
-  = !("]" / "\\" / LineTerminator) SourceCharacter { return text(); }
-  / "\\" sequence:EscapeSequence { return sequence; }
+  = !(`]` / `\\` / LineTerminator) SourceCharacter { return text() }
+  / `\\` sequence:EscapeSequence { return sequence }
   / LineContinuation
 
 LineContinuation
-  = "\\" LineTerminatorSequence { return ""; }
+  = `\\` LineTerminatorSequence { return `` }
 
 EscapeSequence
   = CharacterEscapeSequence
-  / "0" !DecimalDigit { return "\0"; }
+  / `0` !DecimalDigit { return `\0` }
   / HexEscapeSequence
   / UnicodeEscapeSequence
 
@@ -425,32 +481,30 @@ CharacterEscapeSequence
   / NonEscapeCharacter
 
 SingleEscapeCharacter
-  = "'"
-  / '"'
-  / "\\"
-  / "b"  { return "\b";   }
-  / "f"  { return "\f";   }
-  / "n"  { return "\n";   }
-  / "r"  { return "\r";   }
-  / "t"  { return "\t";   }
-  / "v"  { return "\x0B"; }   // IE does not recognize "\v".
+  = ["'`\\]
+  / `b` { return `\b` }
+  / `f` { return `\f` }
+  / `n` { return `\n` }
+  / `r` { return `\r` }
+  / `t` { return `\t` }
+  / `v` { return `\x0B` }   // IE does not recognize `\v`.
 
 NonEscapeCharacter
-  = !(EscapeCharacter / LineTerminator) SourceCharacter { return text(); }
+  = !(EscapeCharacter / LineTerminator) SourceCharacter { return text() }
 
 EscapeCharacter
   = SingleEscapeCharacter
   / DecimalDigit
-  / "x"
-  / "u"
+  / `x`
+  / `u`
 
 HexEscapeSequence
-  = "x" digits:$(HexDigit HexDigit) {
+  = `x` digits:$(HexDigit HexDigit) {
       return String.fromCharCode(parseInt(digits, 16));
     }
 
 UnicodeEscapeSequence
-  = "u" digits:$(HexDigit HexDigit HexDigit HexDigit) {
+  = `u` digits:$(HexDigit HexDigit HexDigit HexDigit) {
       return String.fromCharCode(parseInt(digits, 16));
     }
 
@@ -461,13 +515,19 @@ HexDigit
   = [0-9a-f]i
 
 AnyMatcher
-  = "." { return { type: "any", location: location() }; }
+  = @token(type: `regexp`) `.` {
+      return {
+        type: `any`,
+        location: location(),
+      };
+    }
 
 CodeBlock
-  = "{" code:Code "}" { return code; }
+  = `{` code:Code `}` { return code }
 
-Code "code:js"
-  = $((![{}] SourceCharacter)+ / "{" Code "}")*
+Code `code:js`
+  = $((![{}] SourceCharacter)+
+  / `{` Code `}`)*
 
 /*
  * Unicode Character Categories
@@ -478,19 +538,19 @@ Code "code:js"
  *
  * Unix magic used:
  *
- *   grep "; $CATEGORY" DerivedGeneralCategory.txt |   # Filter characters
- *     cut -f1 -d " " |                                # Extract code points
- *     grep -v '[0-9a-fA-F]\{5\}' |                    # Exclude non-BMP characters
- *     sed -e 's/\.\./-/' |                            # Adjust formatting
- *     sed -e 's/\([0-9a-fA-F]\{4\}\)/\\u\1/g' |       # Adjust formatting
- *     tr -d '\n'                                      # Join lines
+ *   grep `; $CATEGORY` DerivedGeneralCategory.txt |   # Filter characters
+ *     cut -f1 -d ` ` |                                # Extract code points
+ *     grep -v `[0-9a-fA-F]\{5\}` |                    # Exclude non-BMP characters
+ *     sed -e `s/\.\./-/` |                            # Adjust formatting
+ *     sed -e `s/\([0-9a-fA-F]\{4\}\)/\\u\1/g` |       # Adjust formatting
+ *     tr -d `\n`                                      # Join lines
  *
  * ECMA-262 allows using Unicode 3.0 or later, version 8.0.0 was the latest one
  * at the time of writing.
  *
  * Non-BMP characters are completely ignored to avoid surrogate pair handling
- * (detecting surrogate pairs isn't possible with a simple character class and
- * other methods would degrade performance). I don't consider it a big deal as
+ * (detecting surrogate pairs isn`t possible with a simple character class and
+ * other methods would degrade performance). I don`t consider it a big deal as
  * even parsers in JavaScript engines of common browsers seem to ignore them.
  */
 
@@ -529,42 +589,42 @@ Zs = [\u0020\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]
 
 /* Tokens */
 
-BreakToken      = "break"      !IdentifierPart
-CaseToken       = "case"       !IdentifierPart
-CatchToken      = "catch"      !IdentifierPart
-ClassToken      = "class"      !IdentifierPart
-ConstToken      = "const"      !IdentifierPart
-ContinueToken   = "continue"   !IdentifierPart
-DebuggerToken   = "debugger"   !IdentifierPart
-DefaultToken    = "default"    !IdentifierPart
-DeleteToken     = "delete"     !IdentifierPart
-DoToken         = "do"         !IdentifierPart
-ElseToken       = "else"       !IdentifierPart
-EnumToken       = "enum"       !IdentifierPart
-ExportToken     = "export"     !IdentifierPart
-ExtendsToken    = "extends"    !IdentifierPart
-FalseToken      = "false"      !IdentifierPart
-FinallyToken    = "finally"    !IdentifierPart
-ForToken        = "for"        !IdentifierPart
-FunctionToken   = "function"   !IdentifierPart
-IfToken         = "if"         !IdentifierPart
-ImportToken     = "import"     !IdentifierPart
-InstanceofToken = "instanceof" !IdentifierPart
-InToken         = "in"         !IdentifierPart
-NewToken        = "new"        !IdentifierPart
-NullToken       = "null"       !IdentifierPart
-ReturnToken     = "return"     !IdentifierPart
-SuperToken      = "super"      !IdentifierPart
-SwitchToken     = "switch"     !IdentifierPart
-ThisToken       = "this"       !IdentifierPart
-ThrowToken      = "throw"      !IdentifierPart
-TrueToken       = "true"       !IdentifierPart
-TryToken        = "try"        !IdentifierPart
-TypeofToken     = "typeof"     !IdentifierPart
-VarToken        = "var"        !IdentifierPart
-VoidToken       = "void"       !IdentifierPart
-WhileToken      = "while"      !IdentifierPart
-WithToken       = "with"       !IdentifierPart
+BreakToken      = `break`      !IdentifierPart
+CaseToken       = `case`       !IdentifierPart
+CatchToken      = `catch`      !IdentifierPart
+ClassToken      = `class`      !IdentifierPart
+ConstToken      = `const`      !IdentifierPart
+ContinueToken   = `continue`   !IdentifierPart
+DebuggerToken   = `debugger`   !IdentifierPart
+DefaultToken    = `default`    !IdentifierPart
+DeleteToken     = `delete`     !IdentifierPart
+DoToken         = `do`         !IdentifierPart
+ElseToken       = `else`       !IdentifierPart
+EnumToken       = `enum`       !IdentifierPart
+ExportToken     = `export`     !IdentifierPart
+ExtendsToken    = `extends`    !IdentifierPart
+FalseToken      = `false`      !IdentifierPart
+FinallyToken    = `finally`    !IdentifierPart
+ForToken        = `for`        !IdentifierPart
+FunctionToken   = `function`   !IdentifierPart
+IfToken         = `if`         !IdentifierPart
+ImportToken     = `import`     !IdentifierPart
+InstanceofToken = `instanceof` !IdentifierPart
+InToken         = `in`         !IdentifierPart
+NewToken        = `new`        !IdentifierPart
+NullToken       = `null`       !IdentifierPart
+ReturnToken     = `return`     !IdentifierPart
+SuperToken      = `super`      !IdentifierPart
+SwitchToken     = `switch`     !IdentifierPart
+ThisToken       = `this`       !IdentifierPart
+ThrowToken      = `throw`      !IdentifierPart
+TrueToken       = `true`       !IdentifierPart
+TryToken        = `try`        !IdentifierPart
+TypeofToken     = `typeof`     !IdentifierPart
+VarToken        = `var`        !IdentifierPart
+VoidToken       = `void`       !IdentifierPart
+WhileToken      = `while`      !IdentifierPart
+WithToken       = `with`       !IdentifierPart
 
 /* Skipped */
 
@@ -577,7 +637,7 @@ _
 /* Automatic Semicolon Insertion */
 
 EOS
-  = __ ";"
+  = __ `;`
   / _ SingleLineComment? LineTerminatorSequence
   / __ EOF
 

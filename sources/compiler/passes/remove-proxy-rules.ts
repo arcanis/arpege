@@ -8,7 +8,7 @@ import {CompileOptions} from '..';
 export function removeProxyRules(ast: asts.Ast, options: CompileOptions) {
   function replaceRuleRefs(ast: asts.Ast, from: string, to: string) {
     const replace = visitor.build({
-      ruleRef(node) {
+      ruleRef(visit, node) {
         if (node.name === from) {
           node.name = to;
         }

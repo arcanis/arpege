@@ -47,3 +47,14 @@ export const RULE = 27;   // RULE r
 
 export const SILENT_FAILS_ON = 28;   // SILENT_FAILS_ON
 export const SILENT_FAILS_OFF = 29;    // SILENT_FAILS_OFF
+
+/* Cleanup functions */
+
+export const BEGIN_TRANSACTION = 30;   // BEGIN_TRANSACTION
+export const ROLLBACK_TRANSACTION = 31;   // ROLLBACK_TRANSACTION
+export const COMMIT_TRANSACTION = 32;   // COMMIT_TRANSACTION
+
+/* Data sharing */
+
+export const ENTER_SCOPE = 33;   // ENTER_SCOPE f, n, pc, p1, p2, ..., pN
+export const EXIT_SCOPE = 34;   // EXIT_SCOPE

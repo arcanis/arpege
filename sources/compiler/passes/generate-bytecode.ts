@@ -1,7 +1,7 @@
-import * as asts from '../asts';
-import * as js   from '../js';
-import * as op   from '../opcodes';
-import {visitor} from '../visitor';
+import * as asts          from '../asts';
+import * as js            from '../js';
+import * as op            from '../opcodes';
+import {VisitFn, visitor} from '../visitor';
 
 export type Bytecode = Array<number>;
 
@@ -223,14 +223,32 @@ export function generateBytecode(ast: asts.Ast) {
     return condCode.concat([bodyCode.length], bodyCode);
   }
 
+  function buildTransaction(bodyCode: Bytecode) {
+    return buildSequence(
+      [op.BEGIN_TRANSACTION],
+      bodyCode,
+      buildCondition(
+        [op.IF_NOT_ERROR],
+        [op.COMMIT_TRANSACTION],
+        [op.ROLLBACK_TRANSACTION],
+      ),
+    );
+  }
+
   function buildCall(functionIndex: number, delta: number, env: Record<string, number>, sp: number) {
     const params = Object.values(env).map(p => sp - p);
 
     return [op.CALL, functionIndex, delta, params.length].concat(params);
   }
 
-  function buildSimplePredicate(expression: asts.Expression, negative: boolean, context: Context) {
-    const compiledExpression = generate(expression, {
+  function buildEnterScope(functionIndex: number, delta: number, env: Record<string, number>, sp: number) {
+    const params = Object.values(env).map(p => sp - p);
+
+    return [op.ENTER_SCOPE, functionIndex, delta, params.length].concat(params);
+  }
+
+  function buildSimplePredicate(visit: VisitFn, expression: asts.Expression, negative: boolean, context: Context) {
+    const compiledExpression = visit(expression, {
       sp: context.sp + 1,
       env: {...context.env},
       action: null,
@@ -290,22 +308,22 @@ export function generateBytecode(ast: asts.Ast) {
   }
 
   const baseGenerate = visitor.build({
-    grammar(node) {
+    grammar(visit, node) {
       for (const rule of node.rules)
-        generate(rule);
+        visit(rule);
 
       node.consts = consts;
     },
 
-    rule(node) {
-      node.bytecode = generate(node.expression, {
+    rule(visit, node) {
+      node.bytecode = visit(node.expression, {
         sp: -1,       // stack pointer
         env: { },     // mapping of label names to stack positions
         action: null, // action nodes pass themselves to children here
       });
     },
 
-    named(node, context: Context) {
+    named(visit, node, context: Context) {
       const nameIndex = addConst(
         `peg$otherExpectation("${js.stringEscape(node.name)}")`,
       );
@@ -318,7 +336,7 @@ export function generateBytecode(ast: asts.Ast) {
        */
       return buildSequence(
         [op.SILENT_FAILS_ON],
-        generate(node.expression, context),
+        visit(node.expression, context),
         [op.SILENT_FAILS_OFF],
         buildCondition(
           [op.IF_ERROR],
@@ -327,13 +345,22 @@ export function generateBytecode(ast: asts.Ast) {
       );
     },
 
-    choice(node, context: Context) {
+    choice(visit, node, context: Context) {
       function buildAlternativesCode([head, ...rest]: Array<asts.Node>, context: Context): Bytecode {
-        const compiledFirstAlternative = generate(head, {
+        const compiledFirstAlternative = visit(head, {
           sp: context.sp,
           env: {...context.env},
           action: null,
         });
+
+        const compiledTransaction = buildTransaction(
+          compiledFirstAlternative,
+        );
+
+        // The last choice doesn't run within a dedicated transaction
+        const compiledSubject = rest.length > 0
+          ? compiledTransaction
+          : compiledFirstAlternative;
 
         const compiledRemainingAlternatives = rest.length > 0 && buildCondition(
           [op.IF_ERROR],
@@ -344,7 +371,7 @@ export function generateBytecode(ast: asts.Ast) {
         );
 
         return buildSequence(
-          compiledFirstAlternative,
+          compiledSubject,
           compiledRemainingAlternatives || [],
         );
       }
@@ -352,11 +379,11 @@ export function generateBytecode(ast: asts.Ast) {
       return buildAlternativesCode(node.alternatives, context);
     },
 
-    action(node, context: Context) {
+    action(visit, node, context: Context) {
       const env = {...context.env};
 
       const emitCall = node.expression.type !== `sequence` || node.expression.elements.length === 0;
-      const expressionCode = generate(node.expression, {
+      const expressionCode = visit(node.expression, {
         sp: context.sp + (emitCall ? 1 : 0),
         env,
         action: node,
@@ -383,13 +410,55 @@ export function generateBytecode(ast: asts.Ast) {
       return production;
     },
 
-    sequence(node, context: Context) {
+    scope(visit, node, context: Context) {
+      const env = {...context.env};
+      const functionIndex = addFunctionConst(Object.keys(env), node.code);
+
+      const expressionCode = visit(node.expression, {
+        sp: context.sp,
+        env: context.env,
+        action: null,
+      });
+
+      return buildSequence(
+        buildEnterScope(functionIndex, 0, env, context.sp),
+        expressionCode,
+        [op.EXIT_SCOPE],
+      );
+    },
+
+    transform(visit, node, context: Context) {
+      const env = {...context.env, current: context.sp + 2};
+      const functionIndex = addFunctionConst(Object.keys(env), node.code);
+
+      const expressionCode = visit(node.expression, {
+        sp: context.sp + 1,
+        env: context.env,
+        action: null,
+      });
+
+      return buildSequence(
+        [op.PUSH_CURR_POS],
+        expressionCode,
+        buildCondition(
+          [op.IF_NOT_ERROR],
+          buildSequence(
+            [op.LOAD_SAVED_POS, 1],
+            buildCall(functionIndex, 1, env, context.sp + 2),
+          ),
+          [],
+        ),
+        [op.NIP],
+      );
+    },
+
+    sequence(visit, node, context: Context) {
       function buildElementsCode(elements: Array<asts.Expression>, context: Context): Bytecode {
         if (elements.length > 0) {
           const processedCount = node.elements.length - elements.slice(1).length;
 
           return buildSequence(
-            generate(elements[0], {
+            visit(elements[0], {
               sp: context.sp,
               env: context.env,
               action: null,
@@ -441,20 +510,20 @@ export function generateBytecode(ast: asts.Ast) {
       );
     },
 
-    labeled(node, context: Context) {
+    labeled(visit, node, context: Context) {
       const env = {...context.env};
 
       context.env[node.label] = context.sp + 1;
 
-      return generate(node.expression, {
+      return visit(node.expression, {
         sp: context.sp,
         env,
         action: null,
       });
     },
 
-    text(node, context: Context) {
-      const compiledExpression = generate(node.expression, {
+    text(visit, node, context: Context) {
+      const compiledExpression = visit(node.expression, {
         sp: context.sp + 1,
         env: {...context.env},
         action: null,
@@ -473,20 +542,22 @@ export function generateBytecode(ast: asts.Ast) {
       );
     },
 
-    simpleAnd(node, context: Context) {
-      return buildSimplePredicate(node.expression, false, context);
+    simpleAnd(visit, node, context: Context) {
+      return buildSimplePredicate(visit, node.expression, false, context);
     },
 
-    simpleNot(node, context: Context) {
-      return buildSimplePredicate(node.expression, true, context);
+    simpleNot(visit, node, context: Context) {
+      return buildSimplePredicate(visit, node.expression, true, context);
     },
 
-    optional(node, context: Context) {
-      const compiledExpression = generate(node.expression, {
-        sp: context.sp,
-        env: {...context.env},
-        action: null,
-      });
+    optional(visit, node, context: Context) {
+      const compiledExpression = buildTransaction(
+        visit(node.expression, {
+          sp: context.sp,
+          env: {...context.env},
+          action: null,
+        }),
+      );
 
       const compiledCondition = buildCondition(
         [op.IF_ERROR],
@@ -500,12 +571,14 @@ export function generateBytecode(ast: asts.Ast) {
       );
     },
 
-    zeroOrMore(node, context: Context) {
-      const compiledExpression = generate(node.expression, {
-        sp: context.sp + 1,
-        env: {...context.env},
-        action: null,
-      });
+    zeroOrMore(visit, node, context: Context) {
+      const compiledExpression = buildTransaction(
+        visit(node.expression, {
+          sp: context.sp + 1,
+          env: {...context.env},
+          action: null,
+        }),
+      );
 
       return buildSequence(
         [op.PUSH_EMPTY_ARRAY],
@@ -515,45 +588,49 @@ export function generateBytecode(ast: asts.Ast) {
       );
     },
 
-    oneOrMore(node, context: Context) {
-      const compiledExpression = generate(node.expression, {
+    oneOrMore(visit, node, context: Context) {
+      const compiledExpression = visit(node.expression, {
         sp: context.sp + 1,
         env: {...context.env},
         action: null,
       });
+
+      const compiledTransaction = buildTransaction(
+        compiledExpression,
+      );
 
       return buildSequence(
         [op.PUSH_EMPTY_ARRAY],
         compiledExpression,
         buildCondition(
           [op.IF_NOT_ERROR],
-          buildSequence(buildAppendLoop(compiledExpression), [op.POP]),
+          buildSequence(buildAppendLoop(compiledTransaction), [op.POP]),
           buildSequence([op.POP], [op.POP], [op.PUSH_FAILED]),
         ),
       );
     },
 
-    group(node, context: Context) {
-      return generate(node.expression, {
+    group(visit, node, context: Context) {
+      return visit(node.expression, {
         sp: context.sp,
         env: {...context.env},
         action: null,
       });
     },
 
-    semanticAnd(node, context: Context) {
+    semanticAnd(visit, node, context: Context) {
       return buildSemanticPredicate(node.code, false, context);
     },
 
-    semanticNot(node, context: Context) {
+    semanticNot(visit, node, context: Context) {
       return buildSemanticPredicate(node.code, true, context);
     },
 
-    ruleRef(node) {
+    ruleRef(visit, node) {
       return [op.RULE, asts.indexOfRule(ast, node.name)];
     },
 
-    literal(node) {
+    literal(visit, node) {
       if (node.value.length === 0)
         return [op.PUSH, addConst(`""`)];
 
@@ -580,7 +657,7 @@ export function generateBytecode(ast: asts.Ast) {
       );
     },
 
-    class(node) {
+    class(visit, node) {
       const prefix = node.inverted ? `^` : ``;
       const flags = node.ignoreCase ? `i` : ``;
 
@@ -595,13 +672,7 @@ export function generateBytecode(ast: asts.Ast) {
       const regexp = `/^[${prefix}${range}]/${flags}`;
 
       const regexpIndex = addConst(regexp);
-      const expectedIndex = addConst(`
-        peg$classExpectation(
-          ${JSON.stringify(node.parts)},
-          ${node.inverted},
-          ${node.ignoreCase},
-        )
-      `);
+      const expectedIndex = addConst(`peg$classExpectation(${JSON.stringify(node.parts)}, ${node.inverted}, ${node.ignoreCase})`);
 
       return buildCondition(
         [op.MATCH_REGEXP, regexpIndex],

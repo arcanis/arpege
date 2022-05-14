@@ -6,7 +6,7 @@
  */
 
 Expression
-  = head:Term tail:(_ ("+" / "-") _ Term)* {
+  = head:Term tail:(_ (@op ("+" / "-")) _ Term)* {
       var result = head, i;
 
       for (i = 0; i < tail.length; i++) {
@@ -18,7 +18,7 @@ Expression
     }
 
 Term
-  = head:Factor tail:(_ ("*" / "/") _ Factor)* {
+  = head:Factor tail:(_ (@op ("*" / "/")) _ Factor)* {
       var result = head, i;
 
       for (i = 0; i < tail.length; i++) {
@@ -34,7 +34,9 @@ Factor
   / Integer
 
 Integer "number"
-  = [0-9]+ { return parseInt(text(), 10); }
+  = @token(type: "number")
+    [0-9]+ { return parseInt(text(), 10); }
 
-_ "whitespace"
-  = [ \t\n\r]*
+_
+  = @token(type: "whitespace")
+    [ \t\n\r]*

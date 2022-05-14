@@ -67,7 +67,7 @@ object
     { return members !== null ? members: {}; }
 
 member
-  = name:string name_separator value:value {
+  = name:(@token(type: "property") string) name_separator value:value {
       return { name: name, value: value };
     }
 
@@ -101,7 +101,8 @@ zero          = "0"
 /* ----- 7. Strings ----- */
 
 string "string"
-  = quotation_mark chars:char* quotation_mark { return chars.join(""); }
+  = @token(type: "string")
+    quotation_mark chars:char* quotation_mark { return chars.join(""); }
 
 char
   = unescaped

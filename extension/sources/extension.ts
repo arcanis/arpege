@@ -1,5 +1,4 @@
 import {posix}     from 'path';
-import {generate}  from 'pegjs';
 import * as vscode from 'vscode';
 
 function importToken(token: any) {
@@ -19,9 +18,9 @@ function importToken(token: any) {
   return tokens;
 }
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
+  const {generate} = await import(`pegjs`);
+
   const tokenTypes = [`namespace`, `class`, `enum`, `interface`, `struct`, `typeParameter`, `type`, `parameter`, `variable`, `property`, `enumMember`, `decorator`, `event`, `function`, `method`, `macro`, `label`, `comment`, `string`, `keyword`, `number`, `regexp`, `operator`, `code:js`, `error`];
   const tokenModifiers = [`declaration`, `definition`, `readonly`, `static`, `deprecated`, `abstract`, `async`, `modification`, `documentation`, `defaultLibrary`];
   const legend = new vscode.SemanticTokensLegend(tokenTypes, tokenModifiers);
@@ -31,14 +30,18 @@ export function activate(context: vscode.ExtensionContext) {
 
   async function getParser(fileName: string) {
     const fileMatch = fileName.match(/\.([a-z]+)(\.stx)?$/);
-    if (!fileMatch)
+    if (!fileMatch) {
+      console.log(`Unknown file name`);
       return null;
+    }
 
     const parsers = vscode.workspace.getConfiguration(`supersyntax`).get(`parsers`) as any;
     const parserName = fileMatch[1];
 
-    if (!Object.prototype.hasOwnProperty.call(parsers, parserName))
+    if (!Object.prototype.hasOwnProperty.call(parsers, parserName)) {
+      console.log(`No parser configured for ${parserName}`);
       return null;
+    }
 
     const folderUri = vscode.workspace.workspaceFolders![0].uri;
     const parserUri = folderUri.with({path: posix.join(folderUri.path, parsers[parserName])});
@@ -105,6 +108,3 @@ export function activate(context: vscode.ExtensionContext) {
 
   vscode.languages.registerDocumentSemanticTokensProvider(selector, provider, legend);
 }
-
-// this method is called when your extension is deactivated
-export function deactivate() {}

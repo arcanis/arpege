@@ -177,10 +177,12 @@ simple_selector
     }
 
 id
-  = id:HASH { return { type: "IDSelector", id: id }; }
+  = @token(type: "class")
+  id:HASH { return { type: "IDSelector", id: id }; }
 
 class
-  = "." class_:IDENT { return { type: "ClassSelector", "class": class_ }; }
+  = @token(type: "class")
+    "." class_:IDENT { return { type: "ClassSelector", "class": class_ }; }
 
 element_name
   = IDENT
@@ -297,9 +299,7 @@ comment
   = "/*" [^*]* "*"+ ([^/*] [^*]* "*"+)* "/"
 
 ident
-  = prefix:$"-"? start:nmstart chars:nmchar* {
-      return prefix + start + chars.join("");
-    }
+  = $(prefix:$"-"? start:nmstart chars:nmchar*)
 
 name
   = chars:nmchar+ { return chars.join(""); }

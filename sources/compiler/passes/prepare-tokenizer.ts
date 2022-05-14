@@ -2,6 +2,32 @@ import * as asts        from '../asts';
 import {visitor}        from '../visitor';
 import {CompileOptions} from '..';
 
+const TOKEN_CODE = `
+  if (peg$skipTokens)
+    return;
+
+  const raw = text();
+  if (!raw)
+    return;
+
+  peg$tokens.push({
+    ...tokenContext,
+    raw,
+    location: location(),
+  });
+
+  onRollback(() => {
+    peg$tokens.pop();
+  });
+`;
+
+const makeToken = (expression: asts.Expression): asts.Transform => ({
+  type: `transform`,
+  code: `peg$pushToken(); return current;`,
+  expression,
+  location: expression.location,
+});
+
 /*
  * Removes proxy rules -- that is, rules that only delegate to other rule.
  */
@@ -9,51 +35,34 @@ export function prepareTokenizer(ast: asts.Ast, options: CompileOptions) {
   if (!options.tokenizer)
     return;
 
-  function wrapWithAction(token: string, expression: asts.Expression): asts.Action {
-    return {
-      type: `action`,
-      code: `return {type: ${JSON.stringify(token)}, raw: text(), location: location()}`,
-      expression: {...expression},
-      location: expression.location,
-    };
-  }
+  ast.initializer ??= {
+    type: `initializer`,
+    code: ``,
+    location: ast.location,
+  };
 
-  visitor.run(ast, visit => ({
-    action(node) {
-      Object.assign(node, node.expression);
-      visit(node.expression);
-    },
-    text(node) {
-      Object.assign(node, {type: `group`});
-      visit(node);
-    },
-    labeled(node) {
-      Object.assign(node, node.expression);
-      visit(node);
-    },
-  }));
+  ast.initializer.code += `
+    const peg$tokens = [];
 
-  visitor.run(ast, visit => ({
-    named(node) {
-      node.expression = wrapWithAction(node.name, node.expression);
-    },
-    literal(node) {
-      Object.assign(node, wrapWithAction(`syntax`, node));
-    },
-    optional(node) {
-      const copy = {...node};
+    let peg$skipTokens = false;
+    let peg$tokenContext = {type: "syntax"};
 
-      Object.assign(node, {
-        type: `action`,
-        code: `return val ?? []`,
-        expression: {
-          type: `labeled`,
-          label: `val`,
-          expression: copy,
-        },
-      });
+    function peg$pushToken(tokenContext = peg$tokenContext) {
+      ${TOKEN_CODE}
+    }
 
-      visit(copy.expression);
+    transforms = [() => peg$tokens];
+  `;
+
+  visitor.run(ast, {
+    class(visit, node) {
+      return makeToken(node);
     },
-  }));
+    literal(visit, node) {
+      return makeToken(node);
+    },
+    text(visit, node) {
+      return makeToken(node);
+    },
+  });
 }

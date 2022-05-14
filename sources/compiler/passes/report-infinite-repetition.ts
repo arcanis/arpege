@@ -8,7 +8,7 @@ import {visitor}      from '../visitor';
  */
 export function reportInfiniteRepetition(ast: asts.Ast) {
   const check = visitor.build({
-    zeroOrMore(node) {
+    zeroOrMore(visit, node) {
       if (!asts.alwaysConsumesOnSuccess(ast, node.expression)) {
         throw new GrammarError(
           `Possible infinite loop when parsing (repetition used with an expression that may not consume any input).`,
@@ -17,7 +17,7 @@ export function reportInfiniteRepetition(ast: asts.Ast) {
       }
     },
 
-    oneOrMore(node) {
+    oneOrMore(visit, node) {
       if (!asts.alwaysConsumesOnSuccess(ast, node.expression)) {
         throw new GrammarError(
           `Possible infinite loop when parsing (repetition used with an expression that may not consume any input).`,

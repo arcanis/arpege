@@ -1,4 +1,5 @@
 import * as asts                                   from './compiler/asts';
+import {VisitFn, visitor}                          from './compiler/visitor';
 import {CompileOptions, CompilePipeline, compiler} from './compiler';
 import {GrammarError}                              from './grammar-error';
 import parser                                      from './grammar.pegjs';
@@ -6,9 +7,10 @@ import parser                                      from './grammar.pegjs';
 /* PEG.js version (uses semantic versioning). */
 export const VERSION = `0.10.0`;
 
-export {GrammarError, compiler, parser};
+export {GrammarError, VisitFn, asts, compiler, parser, visitor};
 
-export type PegOptions = CompileOptions & {
+export type GenerateOptions = CompileOptions & {
+  parser: any;
   plugins: Array<Plugin>;
 };
 
@@ -20,7 +22,7 @@ export type PegPluginContext = {
 export interface Plugin {
   use(
     context: PegPluginContext,
-    options: Partial<PegOptions>,
+    options: Partial<GenerateOptions>,
   ): void;
 }
 
@@ -35,9 +37,9 @@ export interface Plugin {
   * errors are detected during the generation and some may protrude to the
   * generated parser and cause its malfunction.
   */
-export function generate(grammar: string, options: Partial<PegOptions> = {}) {
-  const config = {
-    parser,
+export function generate(grammar: string, options: Partial<GenerateOptions> = {}): any {
+  const config: PegPluginContext = {
+    parser: options.parser ?? parser,
     passes: compiler.defaultPipeline,
   };
 

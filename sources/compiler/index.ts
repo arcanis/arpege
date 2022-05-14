@@ -1,4 +1,8 @@
+import {applyOp}                  from './annotations/apply-op';
+import {applySeparator}           from './annotations/apply-separator';
+import {applyToken}               from './annotations/apply-token';
 import * as asts                  from './asts';
+import {applyAnnotations}         from './passes/apply-annotations';
 import {generateBytecode}         from './passes/generate-bytecode';
 import {generateJS}               from './passes/generate-js';
 import {prepareTokenizer}         from './passes/prepare-tokenizer';
@@ -14,6 +18,7 @@ const saferEval = eval;
 
 export type CompileOptions = {
   allowedStartRules: Array<string>;
+  annotations: Record<string, CompileAnnotation>;
   cache: boolean;
   dependencies: Record<string, string>;
   exportVar: string | null;
@@ -26,15 +31,23 @@ export type CompileOptions = {
 
 export const defaultOptions: CompileOptions = {
   allowedStartRules: [],
+  annotations: {},
   cache: false,
   dependencies: {},
   exportVar: null,
-  format: `commonjs`,
+  format: `bare`,
   optimize: `speed`,
   output: `parser`,
   tokenizer: false,
   trace: false,
 };
+
+export type CompileAnnotation = (
+  ast: asts.Ast,
+  node: asts.Node,
+  parameters: Record<string, any>,
+  options: CompileOptions
+) => asts.Node;
 
 export type CompilePass = (
   ast: asts.Ast,
@@ -49,6 +62,12 @@ export type CompilePipeline =
     >
   >;
 
+const annotations = {
+  op: applyOp,
+  separator: applySeparator,
+  token: applyToken,
+};
+
 const passes = {
   check: {
     reportUndefinedRules,
@@ -60,6 +79,7 @@ const passes = {
   transform: {
     prepareTokenizer,
     removeProxyRules,
+    applyAnnotations,
   },
   generate: {
     generateBytecode,
@@ -78,6 +98,7 @@ const defaultPipeline = {
   transform: [
     prepareTokenizer,
     removeProxyRules,
+    applyAnnotations,
   ],
   generate: [
     generateBytecode,
@@ -86,6 +107,11 @@ const defaultPipeline = {
 };
 
 export const compiler = {
+  /**
+   * Expression annotations.
+   */
+  annotations,
+
   /*
    * Compiler passes.
    *
@@ -117,6 +143,11 @@ export const compiler = {
       ...defaultOptions,
       allowedStartRules: [ast.rules[0].name],
       ...userOptions,
+    };
+
+    options.annotations = {
+      ...annotations,
+      ...options.annotations,
     };
 
     if (options.output === `parser`)

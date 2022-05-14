@@ -18,13 +18,13 @@ export function reportInfiniteRecursion(ast: asts.Ast) {
   const visitedRules = new Set<string>();
 
   const check = visitor.build({
-    rule(node) {
+    rule(visit, node) {
       visitedRules.add(node.name);
       check(node.expression);
       visitedRules.delete(node.name);
     },
 
-    sequence(node) {
+    sequence(visit, node) {
       for (const element of node.elements) {
         check(element);
 
@@ -34,10 +34,10 @@ export function reportInfiniteRecursion(ast: asts.Ast) {
       }
     },
 
-    ruleRef(node) {
+    ruleRef(visit, node) {
       if (visitedRules.has(node.name)) {
         throw new GrammarError(
-          `Possible infinite loop when parsing (left recursion: ${[...visitedRules].join(` -> `)}).`,
+          `Possible infinite loop when parsing (left recursion: ${[...visitedRules, node.name].join(` -> `)}).`,
           node.location,
         );
       }

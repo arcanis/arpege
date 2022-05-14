@@ -289,12 +289,12 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
       `          break;`,
       ``,
       `        case ${op.POP}:`,                // POP
-      `          stack.popOne();`,
+      `          stack.pop();`,
       `          ip++;`,
       `          break;`,
       ``,
       `        case ${op.POP_CURR_POS}:`,       // POP_CURR_POS
-      `          peg$currPos = stack.popOne();`,
+      `          peg$currPos = stack.pop();`,
       `          ip++;`,
       `          break;`,
       ``,
@@ -309,7 +309,7 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
       `          break;`,
       ``,
       `        case ${op.APPEND}:`,             // APPEND
-      `          stack[stack.length - 2].push(stack.popOne());`,
+      `          stack[stack.length - 2].push(stack.pop());`,
       `          ip++;`,
       `          break;`,
       ``,
@@ -319,7 +319,7 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
       `          break;`,
       ``,
       `        case ${op.TEXT}:`,               // TEXT
-      `          stack.push(input.substring(stack.popOne(), peg$currPos));`,
+      `          stack.push(input.substring(stack.pop(), peg$currPos));`,
       `          ip++;`,
       `          break;`,
       ``,
@@ -454,11 +454,11 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
         return code;
       },
 
-      popOne() {
+      pop() {
         return s(this.sp--);
       },
 
-      pop(n: number) {
+      popN(n: number) {
         const values = arrays
           .range(this.sp - n + 1, this.sp + 1)
           .map(s);
@@ -470,6 +470,14 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
 
       top() {
         return s(this.sp);
+      },
+
+      topN(n: number) {
+        const values = arrays
+          .range(this.sp - n + 1, this.sp + 1)
+          .map(s);
+
+        return values;
       },
 
       index(i: number) {
@@ -552,7 +560,7 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
           ).join(`, `)
         })`;
 
-        stack.pop(bc[ip + 2]);
+        stack.popN(bc[ip + 2]);
         parts.push(stack.push(value));
 
         ip += baseLength + paramsLength;
@@ -591,43 +599,43 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
           } break;
 
           case op.POP: {              // POP
-            stack.popOne();
+            stack.pop();
             ip++;
           } break;
 
           case op.POP_CURR_POS: {     // POP_CURR_POS
-            parts.push(`peg$currPos = ${stack.popOne()};`);
+            parts.push(`peg$currPos = ${stack.pop()};`);
             ip++;
           } break;
 
           case op.POP_N: {            // POP_N n
-            stack.pop(bc[ip + 1]);
+            stack.popN(bc[ip + 1]);
             ip += 2;
           } break;
 
           case op.NIP: {              // NIP
-            value = stack.popOne();
-            stack.popOne();
+            value = stack.pop();
+            stack.pop();
             parts.push(stack.push(value));
             ip++;
           } break;
 
           case op.APPEND: {           // APPEND
-            value = stack.popOne();
+            value = stack.pop();
             parts.push(`${stack.top()}.push(${value});`);
             ip++;
           } break;
 
           case op.WRAP: {             // WRAP n
             parts.push(
-              stack.push(`[${stack.pop(bc[ip + 1]).join(`, `)}]`),
+              stack.push(`[${stack.popN(bc[ip + 1]).join(`, `)}]`),
             );
             ip += 2;
           } break;
 
           case op.TEXT: {             // TEXT
             parts.push(
-              stack.push(`input.substring(${stack.popOne()}, peg$currPos)`),
+              stack.push(`input.substring(${stack.pop()}, peg$currPos)`),
             );
             ip++;
           } break;
@@ -740,6 +748,40 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
 
           case op.SILENT_FAILS_OFF: { // SILENT_FAILS_OFF
             parts.push(`peg$silentFails--;`);
+
+            ip++;
+          } break;
+
+          case op.BEGIN_TRANSACTION: { // BEGIN_TRANSACTION
+            parts.push(`peg$transactions.unshift([]);`);
+
+            ip++;
+          } break;
+
+          case op.ROLLBACK_TRANSACTION: { // ROLLBACK_TRANSACTION
+            parts.push(`peg$transactions.shift().forEach(fn => fn());`);
+
+            ip++;
+          } break;
+
+          case op.COMMIT_TRANSACTION: { // COMMIT_TRANSACTION
+            parts.push(`peg$currentTransaction = peg$transactions.shift();`);
+            parts.push(`if (peg$transactions.length > 0) {`);
+            parts.push(`  peg$transactions[0].unshift(...peg$currentTransaction);`);
+            parts.push(`} else {`);
+            parts.push(`  peg$currentTransaction = undefined;`);
+            parts.push(`}`);
+
+            ip++;
+          } break;
+
+          case op.ENTER_SCOPE: { // ENTER_SCOPE f, n, pc, p1, p2, ..., pN
+            compileCall();
+            parts.push(`peg$scopes.unshift(${stack.pop()});`);
+          } break;
+
+          case op.EXIT_SCOPE: { // EXIT_SCOPE
+            parts.push(`peg$scopes.shift()?.()`);
 
             ip++;
           } break;
@@ -1012,12 +1054,15 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
     parts.push(indent6(generateTables()));
     parts.push([
       ``,
-      `      peg$currPos          = 0,`,
-      `      peg$savedPos         = 0,`,
-      `      peg$posDetailsCache  = [{ line: 1, column: 1 }],`,
-      `      peg$maxFailPos       = 0,`,
-      `      peg$maxFailExpected  = [],`,
-      `      peg$silentFails      = 0,`,   // 0 = report failures, > 0 = silence failures
+      `      peg$currPos            = 0,`,
+      `      peg$savedPos           = 0,`,
+      `      peg$posDetailsCache    = [{ line: 1, column: 1 }],`,
+      `      peg$maxFailPos         = 0,`,
+      `      peg$maxFailExpected    = [],`,
+      `      peg$scopes             = [],`,
+      `      peg$transactions       = [],`,
+      `      peg$currentTransaction = undefined,`,
+      `      peg$silentFails        = 0,`,   // 0 = report failures, > 0 = silence failures
       ``,
     ].join(`\n`));
 
@@ -1075,12 +1120,26 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
 
     parts.push([
       ``,
+      `  var transforms = [];`,
+      ``,
       `  function text() {`,
       `    return input.substring(peg$savedPos, peg$currPos);`,
       `  }`,
       ``,
       `  function location() {`,
       `    return peg$computeLocation(peg$savedPos, peg$currPos);`,
+      `  }`,
+      ``,
+      `  function onRollback(fn) {`,
+    ].join(`\n`));
+
+    parts.push(options.cache
+      ? `    throw new Error('Parsing transactions can\\'t be used if the cache is enabled');`
+      : `    peg$transactions[0]?.unshift(fn);`);
+
+    parts.push([
+      ``,
+      `    `,
       `  }`,
       ``,
       `  function expected(description, location) {`,
@@ -1219,7 +1278,7 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
     parts.push([
       ``,
       `  if (peg$result !== peg$FAILED && peg$currPos === input.length) {`,
-      `    return peg$result;`,
+      `    return transforms.reduce((value, transform) => transform(value), peg$result);`,
       `  } else {`,
       `    if (peg$result !== peg$FAILED && peg$currPos < input.length) {`,
       `      peg$fail(peg$endExpectation());`,

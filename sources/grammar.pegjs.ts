@@ -1,8 +1,15 @@
-import fs  from 'fs';
-import peg from 'pegjs-dev';
+import fs         from 'fs';
+import {generate} from 'pegjs';
+
+// @ts-expect-error
+import lkgParser  from './lkg-parser';
 
 const grammar = fs.readFileSync(require.resolve(`./grammar.pegjs.pegjs`), `utf8`);
-const parser = peg.generate(grammar);
+const parser = {
+  parse(...args: Array<any>) {
+    return generate(grammar, {format: `commonjs`, output: `parser`, parser: lkgParser}).parse(...args);
+  },
+};
 
 // eslint-disable-next-line arca/no-default-export
 export default parser;

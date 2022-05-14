@@ -5,7 +5,7 @@ import {visitor}      from '../visitor';
 /* Checks that all referenced rules exist. */
 export function reportUndefinedRules(ast: asts.Ast) {
   const check = visitor.build({
-    ruleRef(node) {
+    ruleRef(visit, node) {
       if (!asts.findRule(ast, node.name)) {
         throw new GrammarError(
           `Rule "${node.name}" is not defined.`,

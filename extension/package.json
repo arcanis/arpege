@@ -17,8 +17,7 @@
   ],
   "main": "./lib/extension.js",
   "activationEvents": [
-    "onDebug",
-    "onLanguage:supersyntax"
+    "*"
   ],
   "contributes": {
     "configuration": {
