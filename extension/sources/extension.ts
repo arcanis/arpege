@@ -1,10 +1,8 @@
-import {posix}     from 'path';
-import {asts}      from 'pegjs';
-import * as vscode from 'vscode';
+import {asts, generate} from 'arpege';
+import {posix}          from 'path';
+import * as vscode      from 'vscode';
 
 export async function activate(context: vscode.ExtensionContext) {
-  const {generate} = await import(`pegjs`);
-
   const tokenTypes = [`namespace`, `class`, `enum`, `interface`, `struct`, `typeParameter`, `type`, `parameter`, `variable`, `property`, `enumMember`, `decorator`, `event`, `function`, `method`, `macro`, `label`, `comment`, `string`, `keyword`, `number`, `regexp`, `operator`, `code:js`, `error`];
   const tokenModifiers = [`declaration`, `definition`, `readonly`, `static`, `deprecated`, `abstract`, `async`, `modification`, `documentation`, `defaultLibrary`];
   const legend = new vscode.SemanticTokensLegend(tokenTypes, tokenModifiers);
@@ -66,7 +64,6 @@ export async function activate(context: vscode.ExtensionContext) {
     if (!token.type)
       return null;
 
-    console.log(token.type);
     const tokenLanguageMatch = token.type.match(/^language:(.*)$/);
     if (tokenLanguageMatch) {
       console.log(`detecting imported token`, tokenLanguageMatch);

@@ -1,20 +1,23 @@
 {
-  "name": "pegjs",
-  "version": "0.10.0",
+  "name": "arpege",
+  "version": "1.0.0",
   "packageManager": "yarn@4.0.0-rc.5",
   "description": "Parser generator for JavaScript",
   "keywords": [
     "parser generator",
     "PEG"
   ],
-  "repository": "https://github.com/arcanis/pegjs",
-  "bugs": "https://github.com/pegjs/pegjs/issues",
+  "repository": "https://github.com/arcanis/arpege",
+  "bugs": "https://github.com/arcanis/arpege/issues",
   "license": "MIT",
   "author": "David Majda <david@majda.cz> (http://majda.cz/)",
   "main": "sources/index.ts",
-  "bin": "sources/cli.ts",
+  "bin": {
+    "peg": "sources/cli.ts"
+  },
   "workspaces": [
-    "extension"
+    "extension",
+    "scripts/pegjs"
   ],
   "dependencies": {
     "clipanion": "^3.2.0-rc.11",
@@ -29,7 +32,7 @@
     "@yarnpkg/eslint-config": "^1.0.0-rc.5",
     "eslint": "^8.15.0",
     "jest": "^28.1.0",
-    "pegjs-dev": "npm:pegjs@^0.10.0",
+    "pegjs": "workspace:*",
     "pretty-format": "^28.1.0",
     "rollup": "^2.72.1",
     "rollup-plugin-pegjs": "^2.1.3",
@@ -38,15 +41,18 @@
     "typescript": "^4.6.4"
   },
   "scripts": {
-    "build:package": "yarn prepack",
-    "prepack": "NODE_OPTIONS=\"${NODE_OPTIONS:-} --require ts-node/register/transpile-only\" yarn rollup -c",
-    "postpack": "rm -rf lib"
+    "prepack": "yarn rollup && yarn peg ./examples/grammar.pegjs.pegjs -o ./lib/grammar.pegjs.js",
+    "postpack": "rm -rf lib",
+    "peg": "yarn ts-node -T sources/cli.ts",
+    "rollup": "NODE_OPTIONS=\"${NODE_OPTIONS:-} --require ts-node/register/transpile-only\" rollup -c"
   },
   "files": [
     "lib"
   ],
   "publishConfig": {
     "main": "lib/index",
-    "bin": "lib/cli"
+    "bin": {
+      "peg": "lib/cli"
+    }
   }
 }

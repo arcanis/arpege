@@ -106,7 +106,7 @@ export type Transform = NodeBase & {
 
 export type Labeled = NodeBase & {
   type: `labeled`;
-  label: string;
+  label: string | null;
   expression: Expression;
 };
 

@@ -1,4 +1,4 @@
-import {generate, GenerateOptions} from 'pegjs';
+import {generate, GenerateOptions} from 'arpege';
 
 import './compiler/passes/helpers';
 
@@ -98,7 +98,7 @@ describe(`generated parser behavior`, () => {
         it(`calls the scope callback before attempting the match`, () => {
           const parser = generate([
             `{ var result = []; }`,
-            `start = a ^{result.push('enter')} {return result}`,
+            `start = (a ^{result.push('enter')}) {return result}`,
             `a = "a" {result.push('a')}`,
           ].join(`\n`), options);
 
@@ -108,7 +108,7 @@ describe(`generated parser behavior`, () => {
         it(`calls the scope callback result after a successful match`, () => {
           const parser = generate([
             `{ var result = []; }`,
-            `start = a ^{return () => {result.push('exit')}} {return result}`,
+            `start = (a ^{return () => {result.push('exit')}}) {return result}`,
             `a = "a" {result.push('a')}`,
           ].join(`\n`), options);
 
@@ -1059,11 +1059,11 @@ describe(`generated parser behavior`, () => {
           describe(`in outer sequence`, () => {
             it(`can access variables defined by preceding labeled elements`, () => {
               const parser = generate(
-                `start = a:"a" ("b" { return a; })`,
+                `start = a:"a" b:("b" { return a; })`,
                 options,
               );
 
-              expect(parser).toParseLanguage(`ab`, [`a`, `a`]);
+              expect(parser).toParseLanguage(`ab`, {a: `a`, b: `a`});
             });
 
             it(`cannot access variable defined by labeled action element`, () => {

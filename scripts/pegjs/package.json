@@ -1,0 +1,6 @@
+{
+  "name": "pegjs",
+  "dependencies": {
+    "arpege": "workspace:*"
+  }
+}

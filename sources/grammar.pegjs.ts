@@ -1,16 +1,18 @@
+import {generate} from 'arpege';
 import fs         from 'fs';
-import {generate} from 'pegjs';
 
 // @ts-expect-error
 import lkgParser  from './lkg-parser';
-import * as utils from './utils';
 
-const grammar = fs.readFileSync(require.resolve(`./grammar.pegjs.pegjs`), `utf8`);
+const grammar = fs.readFileSync(require.resolve(`arpege/examples/grammar.pegjs.pegjs`), `utf8`);
+let parserImpl: any;
+
 const parser = {
   parse(...args: Array<any>) {
-    return utils.disableLogs(() => {
-      return generate(grammar, {format: `commonjs`, output: `parser`, parser: lkgParser}).parse(...args);
-    });
+    if (typeof parserImpl === `undefined`)
+      parserImpl = generate(grammar, {format: `commonjs`, output: `parser`, parser: lkgParser});
+
+    return parserImpl.parse(...args);
   },
 };
 

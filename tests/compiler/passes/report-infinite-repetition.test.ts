@@ -1,4 +1,4 @@
-import {compiler} from 'pegjs';
+import {compiler} from 'arpege';
 
 import './helpers';
 

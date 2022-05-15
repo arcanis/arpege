@@ -1,4 +1,4 @@
-import {asts, parser, VisitFn, visitor} from 'pegjs';
+import {asts, parser, VisitFn, visitor} from 'arpege';
 import format                           from 'pretty-format';
 
 declare global {

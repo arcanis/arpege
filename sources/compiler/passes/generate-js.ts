@@ -844,7 +844,7 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
       `  this.expected = expected;`,
       `  this.found    = found;`,
       `  this.location = location;`,
-      `  this.name     = "SyntaxError";`,
+      `  this.name     = "PegSyntaxError";`,
       ``,
       `  if (typeof Error.captureStackTrace === "function") {`,
       `    Error.captureStackTrace(this, peg$SyntaxError);`,

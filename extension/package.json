@@ -3,10 +3,10 @@
   "publisher": "arcanis",
   "version": "0.0.8",
   "displayName": "SuperSyntax - custom grammars for VSCode",
-  "description": "Adds support for PEG.js-powered languages in VSCode",
+  "description": "Adds support for Arpege-powered languages in VSCode",
   "repository": {
     "type": "git",
-    "url": "ssh://git@github.com/arcanis/pegjs.git",
+    "url": "ssh://git@github.com/arcanis/arpege.git",
     "directory": "extension"
   },
   "engines": {
@@ -20,6 +20,12 @@
     "onDebug",
     "onLanguage:supersyntax"
   ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Running SuperSyntax requires generating parsers from the grammar files, which can contain arbitrary JavaScript code"
+    }
+  },
   "contributes": {
     "configuration": {
       "title": "SuperSyntax",
@@ -67,21 +73,16 @@
     ]
   },
   "dependencies": {
-    "pegjs": "workspace:*",
+    "arpege": "workspace:*",
     "tslib": "^2.4.0"
   },
   "devDependencies": {
-    "@rollup/plugin-alias": "^3.1.9",
-    "@rollup/plugin-typescript": "^8.3.2",
     "@types/vscode": "^1.67.0",
-    "rollup": "^2.72.1",
-    "rollup-plugin-pegjs": "^2.1.3",
     "typescript": "^4.6.4",
     "vsce": "^2.7.0"
   },
   "scripts": {
-    "build:extension": "yarn prepack",
-    "prepack": "yarn rollup -c",
-    "postpack": "rm -rf lib"
+    "prepack": "yarn workspace arpege run rollup -c",
+    "vsix": "yarn vsce package --yarn"
   }
 }

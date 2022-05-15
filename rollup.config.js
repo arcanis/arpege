@@ -6,7 +6,7 @@ const plugins = ({tsconfig}) => [
   pegjs(),
   alias({
     entries: [
-      {find: /(grammar\.[^.]+)$/, replacement: `$1.pegjs`},
+      {find: /^.*\/(grammar\.[^./]+)$/, replacement: `${__dirname}/examples/$1.pegjs`},
     ],
   }),
   ts({

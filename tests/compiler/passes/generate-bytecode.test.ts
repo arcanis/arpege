@@ -1,4 +1,4 @@
-import {compiler} from 'pegjs';
+import {compiler} from 'arpege';
 
 import './helpers';
 
@@ -81,14 +81,14 @@ describe(`compiler pass |generateBytecode|`, () => {
       expect(generateBytecode).toChangeAST(`start = "a" / "b" / "c"`, bytecodeDetails([
         30,                          // BEGIN_TRANSACTION
         18, 0, 2, 2, 22, 0, 23, 1,   // <alternatives[0]>
-        14, 1, 1,                    // IF_NOT_ERROR
+        15, 1, 1,                    // IF_NOT_ERROR
         32,                          //   * COMMIT_TRANSACTION
         31,                          //   * ROLLBACK_TRANSACTION
         14, 27, 0,                   // IF_ERROR
         6,                           //   * POP
         30,                          //     BEGIN_TRANSACTION
         18, 2, 2, 2, 22, 2, 23, 3,   //     <alternatives[1]>
-        14, 1, 1,                    //     IF_NOT_ERROR
+        15, 1, 1,                    //     IF_NOT_ERROR
         32,                          //       * COMMIT_TRANSACTION
         31,                          //       * ROLLBACK_TRANSACTION
         14, 9, 0,                    //     IF_ERROR
@@ -422,11 +422,11 @@ describe(`compiler pass |generateBytecode|`, () => {
         expect(generateBytecode).toChangeAST(grammar, bytecodeDetails([
           5,                           // PUSH_CURR_POS
           18, 0, 2, 2, 22, 0, 23, 1,   // <elements[0]>
-          15, 55, 3,                   // IF_NOT_ERROR
+          15, 62, 3,                   // IF_NOT_ERROR
           18, 2, 2, 2, 22, 2, 23, 3,   //   * <elements[1]>
-          15, 40, 4,                   //     IF_NOT_ERROR
+          15, 47, 4,                   //     IF_NOT_ERROR
           18, 4, 2, 2, 22, 4, 23, 5,   //       * <elements[2]>
-          15, 25, 4,                   //         IF_NOT_ERROR
+          15, 32, 4,                   //         IF_NOT_ERROR
           25,                          //           * UPDATE_SAVED_POS
           26, 6, 0, 3, 2, 1, 0,        //             CALL
           13, 2, 2,                    //             IF
@@ -434,8 +434,9 @@ describe(`compiler pass |generateBytecode|`, () => {
           1,                           //                 PUSH_UNDEFINED
           6,                           //               * POP
           3,                           //                 PUSH_FAILED
-          15, 3, 4,                    //             IF_NOT_ERROR
-          11, 4,                       //               * WRAP
+          15, 10, 4,                   //             IF_NOT_ERROR
+          24, 4,                       //               * LOAD_SAVED_POS
+          26, 7, 4, 3, 3, 2, 1,        //                 CALL
           9,                           //                 NIP
           8, 4,                        //               * POP_N
           7,                           //                 POP_CURR_POS
@@ -461,6 +462,7 @@ describe(`compiler pass |generateBytecode|`, () => {
           `"c"`,
           `peg$literalExpectation("c", false)`,
           `function(a, b, c) { code }`,
+          `function(a, b, c) {return {a, b, c}}`,
         ]));
       });
     });
@@ -497,11 +499,11 @@ describe(`compiler pass |generateBytecode|`, () => {
         expect(generateBytecode).toChangeAST(grammar, bytecodeDetails([
           5,                           // PUSH_CURR_POS
           18, 0, 2, 2, 22, 0, 23, 1,   // <elements[0]>
-          15, 55, 3,                   // IF_NOT_ERROR
+          15, 62, 3,                   // IF_NOT_ERROR
           18, 2, 2, 2, 22, 2, 23, 3,   //   * <elements[1]>
-          15, 40, 4,                   //     IF_NOT_ERROR
+          15, 47, 4,                   //     IF_NOT_ERROR
           18, 4, 2, 2, 22, 4, 23, 5,   //       * <elements[2]>
-          15, 25, 4,                   //         IF_NOT_ERROR
+          15, 32, 4,                   //         IF_NOT_ERROR
           25,                          //           * UPDATE_SAVED_POS
           26, 6, 0, 3, 2, 1, 0,        //             CALL
           13, 2, 2,                    //             IF
@@ -509,8 +511,9 @@ describe(`compiler pass |generateBytecode|`, () => {
           3,                           //                 PUSH_FAILED
           6,                           //               * POP
           1,                           //                 PUSH_UNDEFINED
-          15, 3, 4,                    //             IF_NOT_ERROR
-          11, 4,                       //               * WRAP
+          15, 10, 4,                   //             IF_NOT_ERROR
+          24, 4,                       //               * LOAD_SAVED_POS
+          26, 7, 4, 3, 3, 2, 1,        //                 CALL
           9,                           //                 NIP
           8, 4,                        //               * POP_N
           7,                           //                 POP_CURR_POS
@@ -523,7 +526,7 @@ describe(`compiler pass |generateBytecode|`, () => {
           3,                           //         PUSH_FAILED
           6,                           //   * POP
           7,                           //     POP_CURR_POS
-          3,                            //     PUSH_FAILED
+          3,                           //     PUSH_FAILED
         ]));
       });
 
@@ -536,6 +539,7 @@ describe(`compiler pass |generateBytecode|`, () => {
           `"c"`,
           `peg$literalExpectation("c", false)`,
           `function(a, b, c) { code }`,
+          `function(a, b, c) {return {a, b, c}}`,
         ]));
       });
     });

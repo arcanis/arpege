@@ -1,4 +1,4 @@
-import * as asts from '../../sources/compiler/asts';
+import * as asts from 'arpege/sources/compiler/asts';
 
 import './compiler/passes/helpers';
 

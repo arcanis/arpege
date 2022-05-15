@@ -1,11 +1,10 @@
-import {Command, Option, runExit} from 'clipanion';
-import fs                         from 'fs';
-import * as t                     from 'typanion';
-import util                       from 'util';
+import {Command, Option, runExit, UsageError} from 'clipanion';
+import fs                                     from 'fs';
+import * as t                                 from 'typanion';
+import util                                   from 'util';
 
-import {CompileOptions}           from './compiler';
-import {generate}                 from './index';
-import * as utils                 from './utils';
+import {CompileOptions}                       from './compiler';
+import {generate}                             from './index';
 
 abstract class BasePegCommand extends Command {
   tokenizer = Option.Boolean(`--tokenizer`, false);
@@ -25,12 +24,22 @@ abstract class BasePegCommand extends Command {
   }
 
   async catch(err: any) {
-    console.log(err);
-    throw err;
+    if (err.name === `PegSyntaxError`) {
+      let message = err.message;
+      if (err.location)
+        message = message.replace(/\.$/, ` at line ${err.location.start.line}, column ${err.location.start.column}.`);
+
+      throw new UsageError(message);
+    } else {
+      throw err;
+    }
   }
 }
 
-runExit([
+runExit({
+  binaryName: `peg`,
+  binaryLabel: `Arpege CLI`,
+}, [
   class GeneratePegCommand extends BasePegCommand {
     format = Option.String(`--format`, `commonjs`, {
       validator: t.isEnum([`amd`, `bare`, `commonjs`, `globals`, `umd`]),

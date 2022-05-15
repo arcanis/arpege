@@ -50,34 +50,17 @@
 
     return result;
   }
-
-  function extractOptional(optional, index) {
-    return optional ? optional[index] : null;
-  }
-
-  function extractList(list, index) {
-    const result = new Array(list.length);
-
-    for (let i = 0; i < list.length; i++)
-      result[i] = list[i][index];
-
-    return result;
-  }
-
-  function buildList(head, tail, index) {
-    return [head].concat(extractList(tail, index));
-  }
 }
 
 /* ---- Syntactic Grammar ----- */
 
 Grammar
-  = __ initializer:(Initializer __)? rules:(Rule __)+ {
+  = __ initializer:(::Initializer __)? rules:(::Rule __)+ {
       return {
         type: `grammar`,
         location: location(),
-        initializer: extractOptional(initializer, 0),
-        rules: extractList(rules, 0),
+        initializer,
+        rules,
       };
     }
 
@@ -92,16 +75,16 @@ Initializer
 
 Rule
   = name:(@token(type: `class`) IdentifierName)
-    __ displayName:(StringLiteral __)? `=` __
+    __ displayName:(::StringLiteral __)? `=` __
     expression:Expression EOS {
       return {
         type: `rule`,
         location: location(),
-        name: name,
+        name,
         expression: displayName === null ? expression : {
           type: `named`,
           location: location(),
-          name: displayName[0],
+          name: displayName,
           expression,
         },
       };
@@ -133,19 +116,19 @@ ScopeExpression
       return {
         type: `scope`,
         location: location(),
-        expression: expression,
-        code: code[1],
+        code,
+        expression,
       };
     }
   / ActionExpression
 
 ActionExpression
-  = expression:SequenceExpression code:(__ CodeBlock)? {
+  = expression:SequenceExpression code:(__ ::CodeBlock)? {
       return code === null ? expression : {
         type: `action`,
         location: location(),
-        expression: expression,
-        code: code[1],
+        code: code ?? ``,
+        expression,
       };
     }
 
@@ -165,6 +148,14 @@ LabeledExpression
         type: `labeled`,
         location: location(),
         label,
+        expression,
+      };
+    }
+  / `::` __ expression:PrefixedExpression {
+      return {
+        type: `labeled`,
+        location: location(),
+        label: null,
         expression,
       };
     }
@@ -282,7 +273,7 @@ SingleLineComment
   = `//` (!LineTerminator SourceCharacter)*
 
 Identifier
-  = !ReservedWord name:IdentifierName { return name; }
+  = !ReservedWord ::IdentifierName
 
 IdentifierName `identifier`
   = head:IdentifierStart tail:IdentifierPart* { return head + tail.join(``); }

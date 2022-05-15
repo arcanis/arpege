@@ -1,3 +1,4 @@
+import { GrammarError } from '../../grammar-error';
 import * as asts          from '../asts';
 import * as js            from '../js';
 import * as op            from '../opcodes';
@@ -453,6 +454,53 @@ export function generateBytecode(ast: asts.Ast) {
     },
 
     sequence(visit, node, context: Context) {
+      if (!context.action) {
+        const labeledElements = node.elements.filter((child): child is asts.Labeled => {
+          return child.type === `labeled`;
+        });
+
+        if (labeledElements.length > 0) {
+          const anonymousOutputs = labeledElements.filter(child => {
+            return child.label === null;
+          });
+
+          if (anonymousOutputs.length !== 0 && anonymousOutputs.length !== labeledElements.length) {
+            throw new GrammarError(
+              `Anonymous and named outputs cannot be mixed inside the same sequence.`,
+              node.location,
+            );
+          }
+
+          if (anonymousOutputs.length === 0) {
+            return visit({
+              type: `action`,
+              location: node.location,
+              code: `return {${labeledElements.map(child => child.label!).join(`, `)}}`,
+              expression: node,
+            }, context);
+          } else {
+            let labelIndex = 0;
+
+            const code = labeledElements.length === 1
+              ? `return value${labelIndex}`
+              : `return [${labeledElements.map((child, i) => `value${i}`).join(`, `)}]`;
+
+            return visit({
+              type: `action`,
+              location: node.location,
+              code,
+              expression: {
+                type: `sequence`,
+                location: node.location,
+                elements: node.elements.map(child => {
+                  return child.type === `labeled` ? {...child, label: `value${labelIndex++}`} : child;
+                }),
+              },
+            }, context);
+          }
+        }
+      }
+
       function buildElementsCode(elements: Array<asts.Expression>, context: Context): Bytecode {
         if (elements.length > 0) {
           const processedCount = node.elements.length - elements.slice(1).length;
@@ -513,7 +561,8 @@ export function generateBytecode(ast: asts.Ast) {
     labeled(visit, node, context: Context) {
       const env = {...context.env};
 
-      context.env[node.label] = context.sp + 1;
+      if (node.label !== null)
+        context.env[node.label] = context.sp + 1;
 
       return visit(node.expression, {
         sp: context.sp,

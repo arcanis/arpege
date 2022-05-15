@@ -5,33 +5,37 @@ import {VisitFn, visitor} from '../visitor';
 /* Checks that each label is defined only once within each scope. */
 export function reportDuplicateLabels(ast: asts.Ast) {
   function checkExpressionWithClonedEnv(visit: VisitFn, node: asts.NodeWithExpression, env: Record<string, asts.Location>) {
-    check(node.expression, {...env});
+    visit(node.expression, {...env});
   }
 
-  const check = visitor.build({
+  return visitor.run(ast, {
     rule(visit, node) {
-      check(node.expression, {});
+      visit(node.expression, {});
     },
 
     choice(visit, node, env) {
       for (const alternative of node.alternatives) {
-        check(alternative, {...env});
+        visit(alternative, {...env});
       }
     },
 
     action: checkExpressionWithClonedEnv,
 
     labeled(visit, node, env: Record<string, asts.Location | null>) {
-      if (Object.prototype.hasOwnProperty.call(env, node.label)) {
-        throw new GrammarError(
-          `Label "${node.label}" is already defined${env[node.label] ? ` at line ${env[node.label]!.start.line}, column ${env[node.label]!.start.column}` : ``}.`,
-          node.location,
-        );
+      if (node.label) {
+        if (Object.prototype.hasOwnProperty.call(env, node.label)) {
+          throw new GrammarError(
+            `Label "${node.label}" is already defined${env[node.label] ? ` at line ${env[node.label]!.start.line}, column ${env[node.label]!.start.column}` : ``}.`,
+            node.location,
+          );
+        }
       }
 
-      check(node.expression, env);
+      visit(node.expression, env);
 
-      env[node.label] = node.location ?? null;
+      if (node.label) {
+        env[node.label] = node.location ?? null;
+      }
     },
 
     text: checkExpressionWithClonedEnv,
@@ -42,6 +46,4 @@ export function reportDuplicateLabels(ast: asts.Ast) {
     oneOrMore: checkExpressionWithClonedEnv,
     group: checkExpressionWithClonedEnv,
   });
-
-  check(ast);
 }
