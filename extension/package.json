@@ -82,7 +82,7 @@
     "vsce": "^2.7.0"
   },
   "scripts": {
-    "prepack": "yarn workspace arpege run rollup -c",
-    "vsix": "yarn vsce package --yarn"
+    "prepack": "yarn workspace arpege run rollup",
+    "vsix": "yarn prepack && yarn vsce package --yarn"
   }
 }
