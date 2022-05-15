@@ -96,9 +96,9 @@ const defaultPipeline = {
     reportInfiniteRepetition,
   ],
   transform: [
-    prepareTokenizer,
     removeProxyRules,
     applyAnnotations,
+    prepareTokenizer,
   ],
   generate: [
     generateBytecode,

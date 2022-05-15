@@ -1,22 +1,6 @@
 import {posix}     from 'path';
+import {asts}      from 'pegjs';
 import * as vscode from 'vscode';
-
-function importToken(token: any) {
-  const tokens: Array<vscode.Range> = [];
-
-  const startLine = token.location.start.line;
-  const endLine = token.location.end.line;
-
-  for (let t = startLine; t <= endLine; ++t) {
-    const start = new vscode.Position(t - 1, t === startLine ? token.location.start.column - 1 : 0);
-    const end = new vscode.Position(t - 1, t === endLine ? token.location.end.column - 1 : 1000);
-
-    const range = new vscode.Range(start, end);
-    tokens.push(range);
-  }
-
-  return tokens;
-}
 
 export async function activate(context: vscode.ExtensionContext) {
   const {generate} = await import(`pegjs`);
@@ -28,23 +12,26 @@ export async function activate(context: vscode.ExtensionContext) {
   const legendTypeSet = new Set(legend.tokenTypes);
   const parserCache = new Map<string, any>();
 
-  async function getParser(fileName: string) {
+  function getLanguageNameForFile(fileName: string) {
     const fileMatch = fileName.match(/\.([a-z]+)(\.stx)?$/);
     if (!fileMatch) {
       console.log(`Unknown file name`);
       return null;
     }
 
-    const parsers = vscode.workspace.getConfiguration(`supersyntax`).get(`parsers`) as any;
-    const parserName = fileMatch[1];
+    return fileMatch[1];
+  }
 
-    if (!Object.prototype.hasOwnProperty.call(parsers, parserName)) {
-      console.log(`No parser configured for ${parserName}`);
+  async function getParser(languageName: string) {
+    const parsers = vscode.workspace.getConfiguration(`supersyntax`).get(`parsers`) as any;
+
+    if (!Object.prototype.hasOwnProperty.call(parsers, languageName)) {
+      console.log(`No parser configured for ${languageName}`);
       return null;
     }
 
     const folderUri = vscode.workspace.workspaceFolders![0].uri;
-    const parserUri = folderUri.with({path: posix.join(folderUri.path, parsers[parserName])});
+    const parserUri = folderUri.with({path: posix.join(folderUri.path, parsers[languageName])});
     const parserKey = parserUri.toString();
 
     let parser = parserCache.get(parserKey);
@@ -68,34 +55,88 @@ export async function activate(context: vscode.ExtensionContext) {
     parserCache.delete(uri.toString());
   });
 
+  function getRangeFromToken(relativeTo: vscode.Position, startLine: number, startColumn: number, endLine: number, endColumn: number) {
+    const start = new vscode.Position(startLine - 1 + relativeTo.line, startColumn - 1 + (startLine === 1 ? relativeTo.character : 0));
+    const end = new vscode.Position(endLine - 1 + relativeTo.line, endColumn - 1 + (endLine === 1 ? relativeTo.character : 0));
+
+    return new vscode.Range(start, end);
+  }
+
+  function importToken(token: asts.Token, document: vscode.TextDocument, relativeTo: vscode.Position, tokensBuilder: vscode.SemanticTokensBuilder) {
+    if (!token.type)
+      return null;
+
+    console.log(token.type);
+    const tokenLanguageMatch = token.type.match(/^language:(.*)$/);
+    if (tokenLanguageMatch) {
+      console.log(`detecting imported token`, tokenLanguageMatch);
+      const range = getRangeFromToken(relativeTo, token.location.start.line, token.location.start.column, token.location.end.line, token.location.end.column);
+      return importExternalLanguageToken(tokenLanguageMatch[1], document, range, tokensBuilder);
+    }
+
+    let tokenType = token.type;
+    if (tokenType === `syntax`) {
+      if (token.raw.match(/^[^a-z]+$/)) {
+        tokenType = `operator`;
+      } else {
+        tokenType = `keyword`;
+      }
+    }
+
+    if (!legendTypeSet.has(tokenType))
+      tokenType = `error`;
+
+    const startLine = token.location.start.line;
+    const endLine = token.location.end.line;
+
+    const getLineWidth = (line: number) => document.lineAt(line).range.end.character;
+
+    for (let t = startLine; t <= endLine; ++t) {
+      const lineWidth = getLineWidth(t - 1) + 1;
+
+      const startColumn = t === startLine ? token.location.start.column : 1;
+      const endColumn = t === endLine ? Math.min(token.location.end.column, lineWidth + 1) : lineWidth;
+      if (startColumn === endColumn)
+        continue;
+
+      const range = getRangeFromToken(relativeTo, t, startColumn, t, endColumn);
+      tokensBuilder.push(range, tokenType, token.modifiers);
+    }
+
+    return null;
+  }
+
+  async function importExternalLanguageToken(languageName: string, document: vscode.TextDocument, range: vscode.Range, tokensBuilder: vscode.SemanticTokensBuilder) {
+    const parser = await getParser(languageName);
+
+    const tokens = parser.parse(document.getText(range));
+    const tokenPromises: Array<Promise<void>> = [];
+
+    for (const token of tokens) {
+      if (!token)
+        continue;
+
+      const promise = importToken(token, document, range.start, tokensBuilder);
+      if (promise) {
+        tokenPromises.push(promise);
+      }
+    }
+
+    await Promise.all(tokenPromises);
+  }
+
   const provider: vscode.DocumentSemanticTokensProvider = {
     async provideDocumentSemanticTokens(document) {
-      const parser = await getParser(document.fileName);
-      if (!parser)
+      const languageName = getLanguageNameForFile(document.fileName);
+      if (!languageName)
         return null;
 
       const tokensBuilder = new vscode.SemanticTokensBuilder(legend);
-      const tokens = parser.parse(document.getText()).flat(Infinity);
 
-      for (const token of tokens) {
-        if (!token)
-          continue;
+      const invalidRange = new vscode.Range(0, 0, document.lineCount, 0);
+      const fullRange = document.validateRange(invalidRange);
 
-        if (token.type === `syntax`) {
-          if (token.raw.match(/^[^a-z]+$/)) {
-            token.type = `operator`;
-          } else {
-            token.type = `keyword`;
-          }
-        }
-
-        if (!legendTypeSet.has(token.type))
-          token.type = `error`;
-
-        for (const range of importToken(token)) {
-          tokensBuilder.push(range, token.type, []);
-        }
-      }
+      await importExternalLanguageToken(languageName, document, fullRange, tokensBuilder);
 
       return tokensBuilder.build();
     },

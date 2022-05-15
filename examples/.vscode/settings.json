@@ -1,6 +1,7 @@
 {
   "supersyntax.parsers": {
     "math": "./grammar.math.pegjs",
+    "nested": "./grammar.nested.pegjs",
     "pegjs": "./grammar.pegjs.pegjs"
   }
 }

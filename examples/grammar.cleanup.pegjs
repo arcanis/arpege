@@ -1,1 +1,0 @@
-foo = @token bar

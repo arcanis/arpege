@@ -5,6 +5,7 @@ import util                       from 'util';
 
 import {CompileOptions}           from './compiler';
 import {generate}                 from './index';
+import * as utils                 from './utils';
 
 abstract class BasePegCommand extends Command {
   tokenizer = Option.Boolean(`--tokenizer`, false);

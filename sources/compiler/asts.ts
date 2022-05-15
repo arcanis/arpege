@@ -14,6 +14,13 @@ export type Location = {
   end: Position;
 };
 
+export type Token = {
+  location: Location;
+  raw: string;
+  type?: string;
+  modifiers?: Array<string>;
+};
+
 export type Annotation = {
   name: string;
   parameters: Record<string, any>;

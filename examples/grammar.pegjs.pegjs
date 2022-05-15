@@ -525,7 +525,7 @@ AnyMatcher
 CodeBlock
   = `{` code:Code `}` { return code }
 
-Code `code:js`
+Code
   = $((![{}] SourceCharacter)+
   / `{` Code `}`)*
 

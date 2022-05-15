@@ -3,11 +3,14 @@ import {generate} from 'pegjs';
 
 // @ts-expect-error
 import lkgParser  from './lkg-parser';
+import * as utils from './utils';
 
 const grammar = fs.readFileSync(require.resolve(`./grammar.pegjs.pegjs`), `utf8`);
 const parser = {
   parse(...args: Array<any>) {
-    return generate(grammar, {format: `commonjs`, output: `parser`, parser: lkgParser}).parse(...args);
+    return utils.disableLogs(() => {
+      return generate(grammar, {format: `commonjs`, output: `parser`, parser: lkgParser}).parse(...args);
+    });
   },
 };
 

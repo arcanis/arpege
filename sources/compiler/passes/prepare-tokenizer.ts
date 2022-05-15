@@ -21,6 +21,19 @@ const TOKEN_CODE = `
   });
 `;
 
+const skipTokens = (expression: asts.Expression): asts.Expression => ({
+  type: `scope`,
+  code: `
+    const skipTokens = peg$skipTokens;
+    peg$skipTokens = true;
+    return () => {
+      peg$skipTokens = skipTokens;
+    };
+  `,
+  expression,
+  location: expression.location,
+});
+
 const makeToken = (expression: asts.Expression): asts.Transform => ({
   type: `transform`,
   code: `peg$pushToken(); return current;`,
@@ -62,7 +75,13 @@ export function prepareTokenizer(ast: asts.Ast, options: CompileOptions) {
       return makeToken(node);
     },
     text(visit, node) {
-      return makeToken(node);
+      return makeToken(skipTokens(node));
+    },
+    simpleNot(visit, node) {
+      return skipTokens(node);
+    },
+    simpleAnd(visit, node) {
+      return skipTokens(node);
     },
   });
 }

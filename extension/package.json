@@ -1,7 +1,7 @@
 {
   "name": "supersyntax",
   "publisher": "arcanis",
-  "version": "0.0.6",
+  "version": "0.0.8",
   "displayName": "SuperSyntax - custom grammars for VSCode",
   "description": "Adds support for PEG.js-powered languages in VSCode",
   "repository": {
@@ -17,7 +17,8 @@
   ],
   "main": "./lib/extension.js",
   "activationEvents": [
-    "*"
+    "onDebug",
+    "onLanguage:supersyntax"
   ],
   "contributes": {
     "configuration": {
