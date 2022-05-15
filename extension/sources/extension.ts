@@ -1,6 +1,12 @@
+import pegjsGrammar     from 'arpege/examples/grammar.pegjs.pegjs';
 import {asts, generate} from 'arpege';
 import {posix}          from 'path';
 import * as vscode      from 'vscode';
+
+
+const BUILTIN_GRAMMARS = {
+  pegjs: pegjsGrammar,
+};
 
 export async function activate(context: vscode.ExtensionContext) {
   const tokenTypes = [`namespace`, `class`, `enum`, `interface`, `struct`, `typeParameter`, `type`, `parameter`, `variable`, `property`, `enumMember`, `decorator`, `event`, `function`, `method`, `macro`, `label`, `comment`, `string`, `keyword`, `number`, `regexp`, `operator`, `code:js`, `error`];
@@ -20,27 +26,47 @@ export async function activate(context: vscode.ExtensionContext) {
     return fileMatch[1];
   }
 
-  async function getParser(languageName: string) {
+  async function loadGrammarFromFs(grammarUri: vscode.Uri) {
+    const grammarData = await vscode.workspace.fs.readFile(grammarUri);
+    return Buffer.from(grammarData).toString(`utf8`);
+  }
+
+  async function getGrammar(languageName: string) {
     const parsers = vscode.workspace.getConfiguration(`supersyntax`).get(`parsers`) as any;
 
     if (!Object.prototype.hasOwnProperty.call(parsers, languageName)) {
+      if (Object.prototype.hasOwnProperty.call(BUILTIN_GRAMMARS, languageName))
+        return {parserKey: `builtin@${languageName}`, loadGrammar: () => BUILTIN_GRAMMARS[languageName as keyof typeof BUILTIN_GRAMMARS]};
+
       console.log(`No parser configured for ${languageName}`);
       return null;
     }
 
     const folderUri = vscode.workspace.workspaceFolders![0].uri;
-    const parserUri = folderUri.with({path: posix.join(folderUri.path, parsers[languageName])});
-    const parserKey = parserUri.toString();
+    const grammarUri = folderUri.with({path: posix.join(folderUri.path, parsers[languageName])});
+
+    if (!grammarUri.path.match(/\.pegjs(\.stx)?$/))
+      throw new Error(`SuperSyntax parsers must have the '.pegjs' or '.pegjs.stx' extensions`);
+
+    const parserKey = grammarUri.toString();
+    const loadGrammar = () => loadGrammarFromFs(grammarUri);
+
+    return {parserKey, loadGrammar};
+  }
+
+  async function getParser(languageName: string) {
+    const languageInfo = await getGrammar(languageName);
+    if (!languageInfo)
+      return null;
+
+    const {
+      parserKey,
+      loadGrammar,
+    } = languageInfo;
 
     let parser = parserCache.get(parserKey);
     if (typeof parser === `undefined`) {
-      if (!parserUri.path.match(/\.pegjs(\.stx)?$/))
-        throw new Error(`SuperSyntax parsers must have the '.pegjs' or '.pegjs.stx' extensions`);
-
-      const contentData = await vscode.workspace.fs.readFile(parserUri);
-      const contentStr = Buffer.from(contentData).toString(`utf8`);
-
-      parser = generate(contentStr, {output: `parser`, tokenizer: true});
+      parser = generate(await loadGrammar(), {output: `parser`, tokenizer: true});
       parserCache.set(parserKey, parser);
     }
 
@@ -66,7 +92,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const tokenLanguageMatch = token.type.match(/^language:(.*)$/);
     if (tokenLanguageMatch) {
-      console.log(`detecting imported token`, tokenLanguageMatch);
       const range = getRangeFromToken(relativeTo, token.location.start.line, token.location.start.column, token.location.end.line, token.location.end.column);
       return importExternalLanguageToken(tokenLanguageMatch[1], document, range, tokensBuilder);
     }
@@ -105,6 +130,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   async function importExternalLanguageToken(languageName: string, document: vscode.TextDocument, range: vscode.Range, tokensBuilder: vscode.SemanticTokensBuilder) {
     const parser = await getParser(languageName);
+    if (!parser)
+      return;
 
     const tokens = parser.parse(document.getText(range));
     const tokenPromises: Array<Promise<void>> = [];

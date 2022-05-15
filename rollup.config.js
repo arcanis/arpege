@@ -1,16 +1,32 @@
-import alias from '@rollup/plugin-alias';
-import ts    from '@rollup/plugin-typescript';
-import pegjs from 'rollup-plugin-pegjs';
+import alias         from '@rollup/plugin-alias';
+import {nodeResolve} from '@rollup/plugin-node-resolve';
+import ts            from '@rollup/plugin-typescript';
+import pegjs         from 'rollup-plugin-pegjs';
+import {string}      from 'rollup-plugin-string';
+
+const external = [
+  `clipanion`,
+  `typanion`,
+  `vscode`,
+];
 
 const plugins = ({tsconfig}) => [
-  pegjs(),
   alias({
     entries: [
-      {find: /^.*\/(grammar\.[^./]+)$/, replacement: `${__dirname}/examples/$1.pegjs`},
+      {find: /^\.\/(grammar\.[^./]+)$/, replacement: `./$1.pegjs`},
     ],
   }),
   ts({
     tsconfig,
+  }),
+  pegjs({
+    include: `**/sources/*.pegjs`,
+  }),
+  string({
+    include: `**/examples/*.pegjs`,
+  }),
+  nodeResolve({
+    resolveOnly: [`arpege`],
   }),
 ];
 
@@ -32,6 +48,8 @@ export default [{
   plugins: plugins({
     tsconfig: `tsconfig.dist.json`,
   }),
+  external,
+  preserveSymlinks: true,
 }, {
   input: [
     `./extension/sources/extension.ts`,
@@ -44,4 +62,6 @@ export default [{
   plugins: plugins({
     tsconfig: `tsconfig.extension.json`,
   }),
+  external,
+  preserveSymlinks: true,
 }];
