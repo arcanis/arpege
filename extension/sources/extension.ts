@@ -1,8 +1,11 @@
 import pegjsGrammar     from 'arpege/examples/grammar.pegjs.pegjs';
 import {asts, generate} from 'arpege';
+import {execFile}       from 'child_process';
 import {posix}          from 'path';
+import {promisify}      from 'util';
 import * as vscode      from 'vscode';
 
+const execFileP = promisify(execFile);
 
 const BUILTIN_GRAMMARS = {
   pegjs: pegjsGrammar,
@@ -31,6 +34,35 @@ export async function activate(context: vscode.ExtensionContext) {
     return Buffer.from(grammarData).toString(`utf8`);
   }
 
+  async function runNodeViaYarn(args: Array<string>, cwd: vscode.Uri) {
+    const {stdout} = await execFileP(`yarn`, [`node`, ...args], {
+      cwd: cwd.fsPath,
+    });
+
+    return stdout;
+  }
+
+  async function runNodeDirect(args: Array<string>, cwd: vscode.Uri) {
+    const {stdout} = await execFileP(`node`, args, {
+      cwd: cwd.fsPath,
+    });
+
+    return stdout;
+  }
+
+  async function loadGrammarFromPackage(grammarModule: string) {
+    const cwd = vscode.workspace.workspaceFolders?.[0].uri;
+    if (!cwd)
+      return null;
+
+    const packageManager = vscode.workspace.getConfiguration(`npm`).get(`packageManager`) as any;
+    const runNode = packageManager === `yarn`
+      ? runNodeViaYarn
+      : runNodeDirect;
+
+    return await runNode([`-e`, `fs.createReadStream(require.resolve(process.argv[1])).pipe(process.stdout)`, grammarModule], cwd);
+  }
+
   async function getGrammar(languageName: string) {
     const parsers = vscode.workspace.getConfiguration(`supersyntax`).get(`parsers`) as any;
 
@@ -41,6 +73,12 @@ export async function activate(context: vscode.ExtensionContext) {
       console.log(`No parser configured for ${languageName}`);
       return null;
     }
+
+    const parserSource = parsers[languageName];
+
+    // If the grammar is contained within a Node package
+    if (parserSource.startsWith(`~`))
+      return {parserKey: parserSource, loadGrammar: () => loadGrammarFromPackage(parserSource.slice(1))};
 
     const folderUri = vscode.workspace.workspaceFolders![0].uri;
     const grammarUri = folderUri.with({path: posix.join(folderUri.path, parsers[languageName])});
@@ -82,8 +120,6 @@ export async function activate(context: vscode.ExtensionContext) {
   function getRangeFromToken(relativeTo: vscode.Position, startLine: number, startColumn: number, endLine: number, endColumn: number) {
     const start = new vscode.Position(startLine - 1 + relativeTo.line, startColumn - 1 + (startLine === 1 ? relativeTo.character : 0));
     const end = new vscode.Position(endLine - 1 + relativeTo.line, endColumn - 1 + (endLine === 1 ? relativeTo.character : 0));
-
-    console.log({startLine, endLine})
 
     return new vscode.Range(start, end);
   }

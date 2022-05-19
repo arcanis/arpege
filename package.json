@@ -16,6 +16,7 @@
     "peg": "sources/cli.ts"
   },
   "workspaces": [
+    "examples",
     "extension",
     "scripts/pegjs"
   ],

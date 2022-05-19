@@ -21,6 +21,10 @@ const RAW_RUNTIME_STATE =
       "reference": "workspace:."\
     },\
     {\
+      "name": "examples",\
+      "reference": "workspace:examples"\
+    },\
+    {\
       "name": "supersyntax",\
       "reference": "workspace:extension"\
     },\
@@ -33,6 +37,7 @@ const RAW_RUNTIME_STATE =
   "ignorePatternData": "(^(?:\\\\.yarn\\\\/sdks(?:\\\\/(?!\\\\.{1,2}(?:\\\\/|$))(?:(?:(?!(?:^|\\\\/)\\\\.{1,2}(?:\\\\/|$)).)*?)|$))$)",\
   "fallbackExclusionList": [\
     ["arpege", ["workspace:."]],\
+    ["examples", ["workspace:examples"]],\
     ["pegjs", ["workspace:scripts/pegjs"]],\
     ["supersyntax", ["workspace:extension"]]\
   ],\
@@ -3437,6 +3442,15 @@ const RAW_RUNTIME_STATE =
           ["esutils", "npm:2.0.3"]\
         ],\
         "linkType": "HARD"\
+      }]\
+    ]],\
+    ["examples", [\
+      ["workspace:examples", {\
+        "packageLocation": "./examples/",\
+        "packageDependencies": [\
+          ["examples", "workspace:examples"]\
+        ],\
+        "linkType": "SOFT"\
       }]\
     ]],\
     ["execa", [\
