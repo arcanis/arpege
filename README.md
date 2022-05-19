@@ -12,6 +12,8 @@ yarn add arpege
 
 ## Usage
 
+Arpege can be used similarly to PegJS; at the moment I recommend you to take a look at their [documentation](https://pegjs.org/).
+
 ## Why forking PegJS?
 
 I wanted to use PegJS on a small language idea I have. However, it proved very difficult to integrate it within VSCode with proper syntactic coloration. I started working on implementing a tokenizer in my own fork, but before that I decided to move the codebase to TypeScript to make this work easier and safer.

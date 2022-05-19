@@ -83,6 +83,8 @@ export async function activate(context: vscode.ExtensionContext) {
     const start = new vscode.Position(startLine - 1 + relativeTo.line, startColumn - 1 + (startLine === 1 ? relativeTo.character : 0));
     const end = new vscode.Position(endLine - 1 + relativeTo.line, endColumn - 1 + (endLine === 1 ? relativeTo.character : 0));
 
+    console.log({startLine, endLine})
+
     return new vscode.Range(start, end);
   }
 
@@ -111,7 +113,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const startLine = token.location.start.line;
     const endLine = token.location.end.line;
 
-    const getLineWidth = (line: number) => document.lineAt(line).range.end.character;
+    const getLineWidth = (line: number) => document.lineAt(relativeTo.line + line).range.end.character;
 
     for (let t = startLine; t <= endLine; ++t) {
       const lineWidth = getLineWidth(t - 1) + 1;
