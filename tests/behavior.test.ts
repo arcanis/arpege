@@ -5,10 +5,10 @@ import './compiler/passes/helpers';
 describe(`generated parser behavior`, () => {
   function varyOptimizationOptions(fn: (options: Partial<GenerateOptions>) => void) {
     const variants: Array<Partial<GenerateOptions>> = [
-      {cache: false, optimize: `speed`, trace: false},
-      {cache: false, optimize: `speed`, trace: true},
-      {cache: true,  optimize: `speed`, trace: false},
-      {cache: true,  optimize: `speed`, trace: true},
+      {cache: false, trace: false},
+      {cache: false, trace: true},
+      {cache: true,  trace: false},
+      {cache: true,  trace: true},
     ];
 
     for (const variant of variants) {

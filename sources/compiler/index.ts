@@ -23,7 +23,6 @@ export type CompileOptions = {
   dependencies: Record<string, string>;
   exportVar: string | null;
   format: `amd` | `bare` | `commonjs` | `globals` | `umd`;
-  optimize: `speed` | `size`;
   output: `parser` | `source`;
   tokenizer: boolean;
   trace: boolean;
@@ -36,7 +35,6 @@ export const defaultOptions: CompileOptions = {
   dependencies: {},
   exportVar: null,
   format: `bare`,
-  optimize: `speed`,
   output: `parser`,
   tokenizer: false,
   trace: false,

@@ -18,36 +18,13 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
   function indent6(code: string)  {
     return code.replace(/^(.+)$/gm, `      $1`);
   }
-  function indent10(code: string) {
-    return code.replace(/^(.+)$/gm, `          $1`);
-  }
 
   function generateTables() {
-    if (options.optimize === `size`) {
-      return [
-        `peg$consts = [`,
-        indent2(ast.consts!.join(`,\n`)),
-        `],`,
-        ``,
-        `peg$bytecode = [`,
-        indent2(ast.rules.map(rule => {
-          return `peg$decode("${
-            js.stringEscape(rule.bytecode!.map(
-              b => {
-                return String.fromCharCode(b + 32);
-              },
-            ).join(``))
-          }")`;
-        }).join(`,\n`)),
-        `],`,
-      ].join(`\n`);
-    } else {
-      return ast.consts!.map(
-        (c, i) => {
-          return `peg$c${i} = ${c},`;
-        },
-      ).join(`\n`);
-    }
+    return ast.consts!.map(
+      (c, i) => {
+        return `peg$c${i} = ${c},`;
+      },
+    ).join(`\n`);
   }
 
   function generateRuleHeader(ruleNameCode: string, ruleIndexCode: string) {
@@ -140,292 +117,6 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
       ``,
       `return ${resultCode};`,
     ].join(`\n`));
-
-    return parts.join(`\n`);
-  }
-
-  function generateInterpreter() {
-    const parts = [];
-
-    function generateCondition(cond: string, argsLength: number) {
-      const baseLength = argsLength + 3;
-      const thenLengthCode = `bc[ip + ${baseLength - 2}]`;
-      const elseLengthCode = `bc[ip + ${baseLength - 1}]`;
-
-      return [
-        `ends.push(end);`,
-        `ips.push(ip + ${baseLength} + ${thenLengthCode} + ${elseLengthCode});`,
-        ``,
-        `if (${cond}) {`,
-        `  end = ip + ${baseLength} + ${thenLengthCode};`,
-        `  ip += ${baseLength};`,
-        `} else {`,
-        `  end = ip + ${baseLength} + ${thenLengthCode} + ${elseLengthCode};`,
-        `  ip += ${baseLength} + ${thenLengthCode};`,
-        `}`,
-        ``,
-        `break;`,
-      ].join(`\n`);
-    }
-
-    function generateLoop(cond: string) {
-      const baseLength = 2;
-      const bodyLengthCode = `bc[ip + ${baseLength - 1}]`;
-
-      return [
-        `if (${cond}) {`,
-        `  ends.push(end);`,
-        `  ips.push(ip);`,
-        ``,
-        `  end = ip + ${baseLength} + ${bodyLengthCode};`,
-        `  ip += ${baseLength};`,
-        `} else {`,
-        `  ip += ${baseLength} + ${bodyLengthCode};`,
-        `}`,
-        ``,
-        `break;`,
-      ].join(`\n`);
-    }
-
-    function generateCall() {
-      const baseLength = 4;
-      const paramsLengthCode = `bc[ip + ${baseLength - 1}]`;
-
-      return [
-        `params = bc.slice(ip + ${baseLength}, ip + ${baseLength} + ${paramsLengthCode});`,
-        `for (i = 0; i < ${paramsLengthCode}; i++) {`,
-        `  params[i] = stack[stack.length - 1 - params[i]];`,
-        `}`,
-        ``,
-        `stack.splice(`,
-        `  stack.length - bc[ip + 2],`,
-        `  bc[ip + 2],`,
-        `  peg$consts[bc[ip + 1]].apply(null, params)`,
-        `);`,
-        ``,
-        `ip += ${baseLength} + ${paramsLengthCode};`,
-        `break;`,
-      ].join(`\n`);
-    }
-
-    parts.push([
-      `function peg$decode(s) {`,
-      `  var bc = new Array(s.length), i;`,
-      ``,
-      `  for (i = 0; i < s.length; i++) {`,
-      `    bc[i] = s.charCodeAt(i) - 32;`,
-      `  }`,
-      ``,
-      `  return bc;`,
-      `}`,
-      ``,
-      `function peg$parseRule(index) {`,
-    ].join(`\n`));
-
-    if (options.trace) {
-      parts.push([
-        `  var bc       = peg$bytecode[index],`,
-        `      ip       = 0,`,
-        `      ips      = [],`,
-        `      end      = bc.length,`,
-        `      ends     = [],`,
-        `      stack    = [],`,
-        `      startPos = peg$currPos,`,
-        `      params, i;`,
-      ].join(`\n`));
-    } else {
-      parts.push([
-        `  var bc    = peg$bytecode[index],`,
-        `      ip    = 0,`,
-        `      ips   = [],`,
-        `      end   = bc.length,`,
-        `      ends  = [],`,
-        `      stack = [],`,
-        `      params, i;`,
-      ].join(`\n`));
-    }
-
-    parts.push(indent2(generateRuleHeader(`peg$ruleNames[index]`, `index`)));
-
-    parts.push([
-      /*
-       * The point of the outer loop and the |ips| & |ends| stacks is to avoid
-       * recursive calls for interpreting parts of bytecode. In other words, we
-       * implement the |interpret| operation of the abstract machine without
-       * function calls. Such calls would likely slow the parser down and more
-       * importantly cause stack overflows for complex grammars.
-       */
-      `  while (true) {`,
-      `    while (ip < end) {`,
-      `      switch (bc[ip]) {`,
-      `        case ${op.PUSH}:`,               // PUSH c
-      `          stack.push(peg$consts[bc[ip + 1]]);`,
-      `          ip += 2;`,
-      `          break;`,
-      ``,
-      `        case ${op.PUSH_UNDEFINED}:`,     // PUSH_UNDEFINED
-      `          stack.push(void 0);`,
-      `          ip++;`,
-      `          break;`,
-      ``,
-      `        case ${op.PUSH_NULL}:`,          // PUSH_NULL
-      `          stack.push(null);`,
-      `          ip++;`,
-      `          break;`,
-      ``,
-      `        case ${op.PUSH_FAILED}:`,        // PUSH_FAILED
-      `          stack.push(peg$FAILED);`,
-      `          ip++;`,
-      `          break;`,
-      ``,
-      `        case ${op.PUSH_EMPTY_ARRAY}:`,   // PUSH_EMPTY_ARRAY
-      `          stack.push([]);`,
-      `          ip++;`,
-      `          break;`,
-      ``,
-      `        case ${op.PUSH_CURR_POS}:`,      // PUSH_CURR_POS
-      `          stack.push(peg$currPos);`,
-      `          ip++;`,
-      `          break;`,
-      ``,
-      `        case ${op.POP}:`,                // POP
-      `          stack.pop();`,
-      `          ip++;`,
-      `          break;`,
-      ``,
-      `        case ${op.POP_CURR_POS}:`,       // POP_CURR_POS
-      `          peg$currPos = stack.pop();`,
-      `          ip++;`,
-      `          break;`,
-      ``,
-      `        case ${op.POP_N}:`,              // POP_N n
-      `          stack.length -= bc[ip + 1];`,
-      `          ip += 2;`,
-      `          break;`,
-      ``,
-      `        case ${op.NIP}:`,                // NIP
-      `          stack.splice(-2, 1);`,
-      `          ip++;`,
-      `          break;`,
-      ``,
-      `        case ${op.APPEND}:`,             // APPEND
-      `          stack[stack.length - 2].push(stack.pop());`,
-      `          ip++;`,
-      `          break;`,
-      ``,
-      `        case ${op.WRAP}:`,               // WRAP n
-      `          stack.push(stack.splice(stack.length - bc[ip + 1], bc[ip + 1]));`,
-      `          ip += 2;`,
-      `          break;`,
-      ``,
-      `        case ${op.TEXT}:`,               // TEXT
-      `          stack.push(input.substring(stack.pop(), peg$currPos));`,
-      `          ip++;`,
-      `          break;`,
-      ``,
-      `        case ${op.IF}:`,                 // IF t, f
-      indent10(generateCondition(`stack[stack.length - 1]`, 0)),
-      ``,
-      `        case ${op.IF_ERROR}:`,           // IF_ERROR t, f
-      indent10(generateCondition(
-        `stack[stack.length - 1] === peg$FAILED`,
-        0,
-      )),
-      ``,
-      `        case ${op.IF_NOT_ERROR}:`,       // IF_NOT_ERROR t, f
-      indent10(
-        generateCondition(`stack[stack.length - 1] !== peg$FAILED`,
-          0,
-        )),
-      ``,
-      `        case ${op.WHILE_NOT_ERROR}:`,    // WHILE_NOT_ERROR b
-      indent10(generateLoop(`stack[stack.length - 1] !== peg$FAILED`)),
-      ``,
-      `        case ${op.MATCH_ANY}:`,          // MATCH_ANY a, f, ...
-      indent10(generateCondition(`input.length > peg$currPos`, 0)),
-      ``,
-      `        case ${op.MATCH_STRING}:`,       // MATCH_STRING s, a, f, ...
-      indent10(generateCondition(
-        `input.substr(peg$currPos, peg$consts[bc[ip + 1]].length) === peg$consts[bc[ip + 1]]`,
-        1,
-      )),
-      ``,
-      `        case ${op.MATCH_STRING_IC}:`,    // MATCH_STRING_IC s, a, f, ...
-      indent10(generateCondition(
-        `input.substr(peg$currPos, peg$consts[bc[ip + 1]].length).toLowerCase() === peg$consts[bc[ip + 1]]`,
-        1,
-      )),
-      ``,
-      `        case ${op.MATCH_REGEXP}:`,       // MATCH_REGEXP r, a, f, ...
-      indent10(generateCondition(
-        `peg$consts[bc[ip + 1]].test(input.charAt(peg$currPos))`,
-        1,
-      )),
-      ``,
-      `        case ${op.ACCEPT_N}:`,           // ACCEPT_N n
-      `          stack.push(input.substr(peg$currPos, bc[ip + 1]));`,
-      `          peg$currPos += bc[ip + 1];`,
-      `          ip += 2;`,
-      `          break;`,
-      ``,
-      `        case ${op.ACCEPT_STRING}:`,      // ACCEPT_STRING s
-      `          stack.push(peg$consts[bc[ip + 1]]);`,
-      `          peg$currPos += peg$consts[bc[ip + 1]].length;`,
-      `          ip += 2;`,
-      `          break;`,
-      ``,
-      `        case ${op.FAIL}:`,               // FAIL e
-      `          stack.push(peg$FAILED);`,
-      `          if (peg$silentFails === 0) {`,
-      `            peg$fail(peg$consts[bc[ip + 1]]);`,
-      `          }`,
-      `          ip += 2;`,
-      `          break;`,
-      ``,
-      `        case ${op.LOAD_SAVED_POS}:`,     // LOAD_SAVED_POS p
-      `          peg$savedPos = stack[stack.length - 1 - bc[ip + 1]];`,
-      `          ip += 2;`,
-      `          break;`,
-      ``,
-      `        case ${op.UPDATE_SAVED_POS}:`,   // UPDATE_SAVED_POS
-      `          peg$savedPos = peg$currPos;`,
-      `          ip++;`,
-      `          break;`,
-      ``,
-      `        case ${op.CALL}:`,               // CALL f, n, pc, p1, p2, ..., pN
-      indent10(generateCall()),
-      ``,
-      `        case ${op.RULE}:`,               // RULE r
-      `          stack.push(peg$parseRule(bc[ip + 1]));`,
-      `          ip += 2;`,
-      `          break;`,
-      ``,
-      `        case ${op.SILENT_FAILS_ON}:`,    // SILENT_FAILS_ON
-      `          peg$silentFails++;`,
-      `          ip++;`,
-      `          break;`,
-      ``,
-      `        case ${op.SILENT_FAILS_OFF}:`,   // SILENT_FAILS_OFF
-      `          peg$silentFails--;`,
-      `          ip++;`,
-      `          break;`,
-      ``,
-      `        default:`,
-      `          throw new Error("Invalid opcode: " + bc[ip] + ".");`,
-      `      }`,
-      `    }`,
-      ``,
-      `    if (ends.length > 0) {`,
-      `      end = ends.pop();`,
-      `      ip = ips.pop();`,
-      `    } else {`,
-      `      break;`,
-      `    }`,
-      `  }`,
-    ].join(`\n`));
-
-    parts.push(indent2(generateRuleFooter(`peg$ruleNames[index]`, `stack[0]`)));
-    parts.push(`}`);
 
     return parts.join(`\n`);
   }
@@ -1028,27 +719,15 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
       ``,
     ].join(`\n`));
 
-    if (options.optimize === `size`) {
-      const startRuleIndex = asts.indexOfRule(ast, options.allowedStartRules[0]);
-      const startRuleIndices = `{ ${options.allowedStartRules.map(r => {
-        return `${r}: ${asts.indexOfRule(ast, r)}`;
-      }).join(`, `)} }`;
+    const startRuleFunction = `peg$parse${options.allowedStartRules[0]}`;
+    const startRuleFunctions = `{ ${options.allowedStartRules.map(r => {
+      return `${r}: peg$parse${r}`;
+    }).join(`, `)} }`;
 
-      parts.push([
-        `      peg$startRuleIndices = ${startRuleIndices},`,
-        `      peg$startRuleIndex   = ${startRuleIndex},`,
-      ].join(`\n`));
-    } else {
-      const startRuleFunction = `peg$parse${options.allowedStartRules[0]}`;
-      const startRuleFunctions = `{ ${options.allowedStartRules.map(r => {
-        return `${r}: peg$parse${r}`;
-      }).join(`, `)} }`;
-
-      parts.push([
-        `      peg$startRuleFunctions = ${startRuleFunctions},`,
-        `      peg$startRuleFunction  = ${startRuleFunction},`,
-      ].join(`\n`));
-    }
+    parts.push([
+      `      peg$startRuleFunctions = ${startRuleFunctions},`,
+      `      peg$startRuleFunction  = ${startRuleFunction},`,
+    ].join(`\n`));
 
     parts.push(``);
     parts.push(indent6(generateTables()));
@@ -1074,17 +753,6 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
     }
 
     if (options.trace) {
-      if (options.optimize === `size`) {
-        const ruleNames = `[${ast.rules.map(r => {
-          return `"${js.stringEscape(r.name)}"`;
-        }).join(`, `)}]`;
-
-        parts.push([
-          `      peg$ruleNames = ${ruleNames},`,
-          ``,
-        ].join(`\n`));
-      }
-
       parts.push([
         `      peg$tracer = "tracer" in options ? options.tracer : new peg$DefaultTracer(),`,
         ``,
@@ -1096,27 +764,15 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
       ``,
     ].join(`\n`));
 
-    if (options.optimize === `size`) {
-      parts.push([
-        `  if ("startRule" in options) {`,
-        `    if (!(options.startRule in peg$startRuleIndices)) {`,
-        `      throw new Error("Can't start parsing from rule \\"" + options.startRule + "\\".");`,
-        `    }`,
-        ``,
-        `    peg$startRuleIndex = peg$startRuleIndices[options.startRule];`,
-        `  }`,
-      ].join(`\n`));
-    } else {
-      parts.push([
-        `  if ("startRule" in options) {`,
-        `    if (!(options.startRule in peg$startRuleFunctions)) {`,
-        `      throw new Error("Can't start parsing from rule \\"" + options.startRule + "\\".");`,
-        `    }`,
-        ``,
-        `    peg$startRuleFunction = peg$startRuleFunctions[options.startRule];`,
-        `  }`,
-      ].join(`\n`));
-    }
+    parts.push([
+      `  if ("startRule" in options) {`,
+      `    if (!(options.startRule in peg$startRuleFunctions)) {`,
+      `      throw new Error("Can't start parsing from rule \\"" + options.startRule + "\\".");`,
+      `    }`,
+      ``,
+      `    peg$startRuleFunction = peg$startRuleFunctions[options.startRule];`,
+      `  }`,
+    ].join(`\n`));
 
     parts.push([
       ``,
@@ -1255,14 +911,9 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
       ``,
     ].join(`\n`));
 
-    if (options.optimize === `size`) {
-      parts.push(indent2(generateInterpreter()));
+    for (const rule of ast.rules) {
+      parts.push(indent2(generateRuleFunction(rule)));
       parts.push(``);
-    } else {
-      for (const rule of ast.rules) {
-        parts.push(indent2(generateRuleFunction(rule)));
-        parts.push(``);
-      }
     }
 
     if (ast.initializer) {
@@ -1270,10 +921,7 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
       parts.push(``);
     }
 
-    if (options.optimize === `size`)
-      parts.push(`  peg$result = peg$parseRule(peg$startRuleIndex);`);
-    else
-      parts.push(`  peg$result = peg$startRuleFunction();`);
+    parts.push(`  peg$result = peg$startRuleFunction();`);
 
     parts.push([
       ``,
