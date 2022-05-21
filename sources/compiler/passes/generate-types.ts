@@ -183,7 +183,7 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
   parts.push(`\n`);
   parts.push(...ruleParts);
   parts.push(`\n`);
-  parts.push(`declare type PegJS$Rules = {\n`);
+  parts.push(`declare type ParseResult = {\n`);
 
   for (const rule of ast.rules) {
     const ruleType = getRuleType(rule.name);
@@ -198,9 +198,10 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
   parts.push(`declare function location(): PegJSLocation;\n`);
   parts.push(`declare function text(): string;\n`);
   parts.push(`\n`);
-  parts.push(`declare const parse: (data: string) => PegJS$Rules['${firstRuleType}'];\n`);
+  parts.push(`type ParseResult = ParseResults['${firstRuleType}'];\n`);
+  parts.push(`declare const parse: (data: string) => ParseResult;\n`);
   parts.push(`\n`);
-  parts.push(`export {parse};\n`);
+  parts.push(`export {PegJSLocation, PegJSPosition, ParseResults, ParseResult, parse};\n`);
 
   ast.code = parts.join(``);
 }

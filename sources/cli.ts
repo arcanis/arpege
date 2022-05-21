@@ -57,7 +57,7 @@ runExit({
         const code = generate(source, {...this.getParserOptions(), output: `types`, format: this.format});
 
         if (typeof this.output !== `undefined`) {
-          await fs.promises.writeFile(`${this.output}.d.ts`, code);
+          await fs.promises.writeFile(`${this.output.replace(/\.cjs$/, ``)}.d.ts`, code);
         } else {
           this.context.stdout.write(code);
           return;
