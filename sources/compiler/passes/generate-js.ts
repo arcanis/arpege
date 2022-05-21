@@ -975,6 +975,15 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
     }
 
     var generators = {
+      typescript() {
+        return [
+          generateGeneratedByComment(),
+          toplevelCode,
+          ``,
+          indent2(`export ${generateParserObject()};`),
+        ].join(`\n`);
+      },
+
       bare() {
         return [
           generateGeneratedByComment(),

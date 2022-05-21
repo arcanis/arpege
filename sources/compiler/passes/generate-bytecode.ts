@@ -1,4 +1,4 @@
-import { GrammarError } from '../../grammar-error';
+import {GrammarError}     from '../../grammar-error';
 import * as asts          from '../asts';
 import * as js            from '../js';
 import * as op            from '../opcodes';

@@ -1,10 +1,11 @@
-import {applyOp}                  from './annotations/apply-op';
 import {applySeparator}           from './annotations/apply-separator';
 import {applyToken}               from './annotations/apply-token';
+import {applyType}                from './annotations/apply-type';
 import * as asts                  from './asts';
 import {applyAnnotations}         from './passes/apply-annotations';
 import {generateBytecode}         from './passes/generate-bytecode';
 import {generateJS}               from './passes/generate-js';
+import {generateTypes}            from './passes/generate-types';
 import {prepareTokenizer}         from './passes/prepare-tokenizer';
 import {removeProxyRules}         from './passes/remove-proxy-rules';
 import {reportDuplicateLabels}    from './passes/report-duplicate-labels';
@@ -23,7 +24,7 @@ export type CompileOptions = {
   dependencies: Record<string, string>;
   exportVar: string | null;
   format: `amd` | `bare` | `commonjs` | `globals` | `umd`;
-  output: `parser` | `source`;
+  output: `parser` | `source` | `types`;
   tokenizer: boolean;
   trace: boolean;
 };
@@ -61,9 +62,9 @@ export type CompilePipeline =
   >;
 
 const annotations = {
-  op: applyOp,
   separator: applySeparator,
   token: applyToken,
+  type: applyType,
 };
 
 const passes = {
@@ -82,10 +83,11 @@ const passes = {
   generate: {
     generateBytecode,
     generateJS,
+    generateTypes,
   },
 };
 
-const defaultPipeline = {
+const getDefaultPipeline = () => ({
   check: [
     reportUndefinedRules,
     reportDuplicateRules,
@@ -102,7 +104,7 @@ const defaultPipeline = {
     generateBytecode,
     generateJS,
   ],
-};
+});
 
 export const compiler = {
   /**
@@ -122,7 +124,7 @@ export const compiler = {
   /**
    * Compiler passes that must be applied unless modifier by plugins.
    */
-  defaultPipeline,
+  getDefaultPipeline,
 
   /*
    * AST node visitor builder. Useful mainly for plugins which manipulate the
@@ -157,8 +159,7 @@ export const compiler = {
 
     switch (options.output) {
       case `parser`: return saferEval(ast.code!);
-      case `source`: return ast.code;
-      default: throw new Error(`Assertion failed: Invalid output type`);
+      default: return ast.code;
     }
   },
 };

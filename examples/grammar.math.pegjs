@@ -5,22 +5,22 @@
 
 Expression
   = head:Term tail:(_ op:("+" / "-") _ val:Term)* {
-      return tail.reduce((result, {op, val}) => {
-        if (op === "+") { return result + val; }
-        if (op === "-") { return result - val; }
-      }, head);
+      return tail.reduce((result, {op, val}) => { switch (op) {
+        case "+": return result + val;
+        case "-": return result - val;
+      }}, head);
     }
 
 Term
   = head:Factor tail:(_ op:("*" / "/") _ val:Factor)* {
-      return tail.reduce((result, {op, val}) => {
-        if (op === "*") { return result * val; }
-        if (op === "/") { return result / val; }
-      }, head);
+      return tail.reduce((result, {op, val}) => { switch (op) {
+        case "*": return result * val;
+        case "/": return result / val;
+      }}, head);
     }
 
 Factor
-  = "(" _ ::Expression _ ")"
+  = (@token(type: "number") "(" _ ::Expression _ ")")
   / Integer
 
 Integer "integer"

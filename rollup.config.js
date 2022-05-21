@@ -1,4 +1,5 @@
 import alias         from '@rollup/plugin-alias';
+import commonjs      from '@rollup/plugin-commonjs';
 import {nodeResolve} from '@rollup/plugin-node-resolve';
 import ts            from '@rollup/plugin-typescript';
 import pegjs         from 'rollup-plugin-pegjs';
@@ -26,8 +27,9 @@ const plugins = ({tsconfig}) => [
     include: `**/examples/*.pegjs`,
   }),
   nodeResolve({
-    resolveOnly: [`arpege`],
+    resolveOnly: [`arpege`, `lodash`],
   }),
+  commonjs(),
 ];
 
 // eslint-disable-next-line arca/no-default-export

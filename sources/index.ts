@@ -40,8 +40,11 @@ export interface Plugin {
 export function generate(grammar: string, options: Partial<GenerateOptions> = {}): any {
   const config: PegPluginContext = {
     parser: options.parser ?? parser,
-    passes: compiler.defaultPipeline,
+    passes: compiler.getDefaultPipeline(),
   };
+
+  if (options.output === `types`)
+    config.passes.generate = [compiler.passes.generate.generateTypes];
 
   for (const p of options.plugins ?? [])
     p.use(config, options);

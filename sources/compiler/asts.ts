@@ -29,6 +29,7 @@ export type Annotation = {
 export type NodeBase = {
   annotations?: Array<Annotation>;
   location?: Location;
+  tsType?: string;
 };
 
 export type Action = NodeBase & {

@@ -20,39 +20,23 @@
  */
 
 {
-  function extractOptional(optional, index) {
-    return optional ? optional[index] : null;
-  }
+  function buildExpression(head: TermType, tail: Array<[OperatorType | null, TermType]>) {
+    type Expression = TermType | {
+      type: "Expression",
+      operator: OperatorType | null;
+      left: Expression;
+      right: Expression;
+    };
 
-  function extractList(list, index) {
-    var result = [], i;
-
-    for (i = 0; i < list.length; i++) {
-      if (list[i][index] !== null) {
-        result.push(list[i][index]);
-      }
-    }
-
-    return result;
-  }
-
-  function buildList(head, tail, index) {
-    return (head !== null ? [head] : []).concat(extractList(tail, index));
-  }
-
-  function buildExpression(head, tail) {
-    var result = head, i;
-
-    for (i = 0; i < tail.length; i++) {
-      result = {
-        type:     "Expression",
-        operator: tail[i][0],
-        left:     result,
-        right:    tail[i][1]
-      };
-    }
+    let result: Expression = head;
+    for (const [operator, right] of tail)
+      result = {type: `Expression`, operator, left: result, right};
 
     return result;
+  }
+
+  interface PegJSInterface {
+    contributeActionInference<TName extends string, T extends {type: TName}>(fn: () => T): T;
   }
 }
 
@@ -62,15 +46,15 @@ start
 /* ----- G.1 Grammar ----- */
 
 stylesheet
-  = charset:(CHARSET_SYM STRING ";")? (S / CDO / CDC)*
-    imports:(import (CDO S* / CDC S*)*)*
-    rules:((ruleset / media / page) (CDO S* / CDC S*)*)*
+  = charset:(CHARSET_SYM ::STRING ";")? (S / CDO / CDC)*
+    imports:(::import (CDO S* / CDC S*)*)*
+    rules:(::(ruleset / media / page) (CDO S* / CDC S*)*)*
     {
       return {
         type:    "StyleSheet",
-        charset: extractOptional(charset, 1),
-        imports: extractList(imports, 0),
-        rules:   extractList(rules, 0)
+        charset: charset,
+        imports: imports,
+        rules:   rules
       };
     }
 
@@ -93,7 +77,8 @@ media
     }
 
 media_list
-  = head:medium tail:("," S* medium)* { return buildList(head, tail, 2); }
+  = @separator(expr: "," S*)
+    medium+
 
 medium
   = name:IDENT S* { return name; }
@@ -101,14 +86,13 @@ medium
 page
   = PAGE_SYM S* selector:pseudo_page?
     "{" S*
-    declarationsFirst:declaration?
-    declarationsRest:(";" S* declaration?)*
+    declarations:(@separator(expr: S*) (::declaration ";")*)
     "}" S*
     {
       return {
         type:         "PageRule",
         selector:     selector,
-        declarations: buildList(declarationsFirst, declarationsRest, 2)
+        declarations: declarations
       };
     }
 
@@ -127,22 +111,21 @@ property
   = name:IDENT S* { return name; }
 
 ruleset
-  = selectorsFirst:selector
-    selectorsRest:("," S* selector)*
+  = selectors:(@separator(expr: "," S*) selector+)
     "{" S*
-    declarationsFirst:declaration?
-    declarationsRest:(";" S* declaration?)*
+    declarations:(@separator(expr: S*) (::declaration ";")*) S*
     "}" S*
     {
       return {
         type:         "RuleSet",
-        selectors:    buildList(selectorsFirst, selectorsRest, 2),
-        declarations: buildList(declarationsFirst, declarationsRest, 2)
+        selectors:    selectors,
+        declarations: declarations
       };
     }
 
 selector
-  = left:simple_selector S* combinator:combinator right:selector {
+  = @type(type: "{type: 'Selector', combinator: CombinatorType, left: SelectorType, right: SimpleSelectorType} | SimpleSelectorType")
+  / left:simple_selector S* combinator:combinator right:selector {
       return {
         type:       "Selector",
         combinator: combinator,
@@ -158,7 +141,7 @@ selector
         right:      right
       };
     }
-  / selector:simple_selector S* { return selector; }
+  / ::simple_selector S*
 
 simple_selector
   = element:element_name qualifiers:(id / class / attrib / pseudo)* {
@@ -191,14 +174,14 @@ element_name
 attrib
   = "[" S*
     attribute:IDENT S*
-    operatorAndValue:(("=" / INCLUDES / DASHMATCH) S* (IDENT / STRING) S*)?
+    operatorAndValue:(operator:("=" / INCLUDES / DASHMATCH) S* value:(IDENT / STRING) S*)?
     "]"
     {
       return {
         type:      "AttributeSelector",
         attribute: attribute,
-        operator:  extractOptional(operatorAndValue, 0),
-        value:     extractOptional(operatorAndValue, 2)
+        operator:  operatorAndValue?.operator,
+        value:     operatorAndValue?.value
       };
     }
 
@@ -249,7 +232,7 @@ term
   / value:IDENT S*  { return { type: "Ident",  value: value }; }
 
 function
-  = name:FUNCTION S* params:expr ")" S* {
+  = name:FUNCTION S* params:(@type(type: "any") expr) ")" S* {
       return { type: "Function", name: name, params: params };
     }
 

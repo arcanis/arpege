@@ -5,43 +5,51 @@ export type VisitFn = (
   ...extraArgs: Array<any>
 ) => any;
 
-type KeysMatching<T extends object, V> = {
-  [K in keyof T]-?: T[K] extends V ? K : never
-}[keyof T];
-
-function createVisitNop<T>() {
-  return function noop(visit: VisitFn, node: T, ...extraArgs: Array<any>): any {
+function createLeafVisitor<T>() {
+  return function leaf(visit: VisitFn, node: T, ...extraArgs: Array<any>): any {
     return node;
   };
 }
 
-function createVisitExpression<T extends asts.NodeWithExpression>() {
+function createExpressionReplacer<T extends asts.NodeWithExpression>() {
   return function visitExpression(visit: VisitFn, node: T, ...extraArgs: Array<any>): any {
     const res = visit(node.expression, ...extraArgs);
 
-    if (typeof res !== `undefined`)
-      node.expression = res;
-
-    return node;
+    if (typeof res !== `undefined`) {
+      node.expression = res as any;
+    }
   };
 }
 
-function createVisitChildren<T extends asts.Node>() {
-  return <K extends KeysMatching<T, Array<asts.Node>>>(property: K) => {
-    return function visitChildren(visit: VisitFn, node: T, ...extraArgs: Array<any>): any {
-      const children: Array<asts.Node> = (node as any)[property];
-      const result: Array<asts.Node> = (node as any)[property] = [];
+function createExpressionProcessor<T extends asts.NodeWithExpression>() {
+  return function visitExpression(visit: VisitFn, node: T, ...extraArgs: Array<any>): any {
+    return visit(node.expression, ...extraArgs);
+  };
+}
 
-      for (const child of children) {
-        const res = visit(child, ...extraArgs);
-        if (res === null)
-          continue;
+function createChildrenReplacer<T extends asts.Node>(property: keyof T) {
+  return function visitChildren(visit: VisitFn, node: T, ...extraArgs: Array<any>): any {
+    const inChildren: Array<asts.Node> = (node as any)[property];
+    const outChildren: Array<asts.Node> = (node as any)[property] = [];
 
-        result.push(res ?? child);
-      }
+    for (const child of inChildren) {
+      const res = visit(child, ...extraArgs);
+      if (res === null)
+        continue;
 
-      return node;
-    };
+      outChildren.push(res ?? child);
+    }
+  };
+}
+
+function createChildrenProcessor<T extends asts.Node>(property: keyof T) {
+  return function visitChildren(visit: VisitFn, node: T, ...extraArgs: Array<any>): any {
+    const values: Array<any> = [];
+
+    for (const child of (node as any)[property])
+      values.push(visit(child, ...extraArgs));
+
+    return values;
   };
 }
 
@@ -54,34 +62,55 @@ function visitGrammar(visit: VisitFn, node: asts.Ast, ...extraArgs: Array<any>) 
   }
 }
 
-const defaultVisitorFunctions = {
+const getDefaultVisitorFunctions = (opts: {
+  createLeafVisitor: <T>() => (visit: VisitFn, node: T, ...extraArgs: Array<any>) => any;
+  createExpressionVisitor: <T extends asts.NodeWithExpression>() => (visit: VisitFn, node: T, ...extraArgs: Array<any>) => any;
+  createChildrenVisitor: <T extends asts.Node>(propertyName: keyof T) => (visit: VisitFn, node: T, ...extraArgs: Array<any>) => any;
+}) => ({
   grammar: visitGrammar,
-  initializer: createVisitNop<asts.Initializer>(),
-  rule: createVisitExpression<asts.Rule>(),
-  named: createVisitExpression<asts.Named>(),
-  choice: createVisitChildren<asts.Choice>()(`alternatives`),
-  action: createVisitExpression<asts.Action>(),
-  scope: createVisitExpression<asts.Scope>(),
-  sequence: createVisitChildren<asts.Sequence>()(`elements`),
-  labeled: createVisitExpression<asts.Labeled>(),
-  text: createVisitExpression<asts.Text>(),
-  simpleAnd: createVisitExpression<asts.SimpleAnd>(),
-  simpleNot: createVisitExpression<asts.SimpleNot>(),
-  optional: createVisitExpression<asts.Optional>(),
-  zeroOrMore: createVisitExpression<asts.ZeroOrMore>(),
-  oneOrMore: createVisitExpression<asts.OneOrMore>(),
-  group: createVisitExpression<asts.Group>(),
-  semanticAnd: createVisitNop<asts.SemanticAnd>(),
-  semanticNot: createVisitNop<asts.SemanticNot>(),
-  ruleRef: createVisitNop<asts.RuleRef>(),
-  transform: createVisitExpression<asts.Transform>(),
-  literal: createVisitNop<asts.Literal>(),
-  class: createVisitNop<asts.Class>(),
-  any: createVisitNop<asts.Any>(),
+  initializer: opts.createLeafVisitor<asts.Initializer>(),
+  rule: opts.createExpressionVisitor<asts.Rule>(),
+  named: opts.createExpressionVisitor<asts.Named>(),
+  choice: opts.createChildrenVisitor<asts.Choice>(`alternatives`),
+  action: opts.createExpressionVisitor<asts.Action>(),
+  scope: opts.createExpressionVisitor<asts.Scope>(),
+  sequence: opts.createChildrenVisitor<asts.Sequence>(`elements`),
+  labeled: opts.createExpressionVisitor<asts.Labeled>(),
+  text: opts.createExpressionVisitor<asts.Text>(),
+  simpleAnd: opts.createExpressionVisitor<asts.SimpleAnd>(),
+  simpleNot: opts.createExpressionVisitor<asts.SimpleNot>(),
+  optional: opts.createExpressionVisitor<asts.Optional>(),
+  zeroOrMore: opts.createExpressionVisitor<asts.ZeroOrMore>(),
+  oneOrMore: opts.createExpressionVisitor<asts.OneOrMore>(),
+  group: opts.createExpressionVisitor<asts.Group>(),
+  semanticAnd: opts.createLeafVisitor<asts.SemanticAnd>(),
+  semanticNot: opts.createLeafVisitor<asts.SemanticNot>(),
+  ruleRef: opts.createLeafVisitor<asts.RuleRef>(),
+  transform: opts.createExpressionVisitor<asts.Transform>(),
+  literal: opts.createLeafVisitor<asts.Literal>(),
+  class: opts.createLeafVisitor<asts.Class>(),
+  any: opts.createLeafVisitor<asts.Any>(),
+});
+
+const defaultFunctions = {
+  replacer: getDefaultVisitorFunctions({
+    createChildrenVisitor: createChildrenReplacer,
+    createExpressionVisitor: createExpressionReplacer,
+    createLeafVisitor,
+  }),
+  processor: getDefaultVisitorFunctions({
+    createChildrenVisitor: createChildrenProcessor,
+    createExpressionVisitor: createExpressionProcessor,
+    createLeafVisitor,
+  }),
 };
 
-export type Visitor = typeof defaultVisitorFunctions;
-export type UserVisitor = Partial<Visitor> & {visit?: (visit: VisitFn, node: asts.Node, ...extraArgs: Array<any>) => any};
+export type Visitor = ReturnType<typeof getDefaultVisitorFunctions>;
+
+export type UserVisitor = Partial<Visitor> & {
+  type?: keyof typeof defaultFunctions;
+  visit?: (visit: VisitFn, node: asts.Node, ...extraArgs: Array<any>) => any;
+};
 
 /* Simple AST node visitor builder. */
 export const visitor = {
@@ -91,11 +120,12 @@ export const visitor = {
       : visitNode;
 
     function visitNode(node: asts.Node, ...extraArgs: Array<any>): any {
+      if (!functions[node.type]) console.log({node})
       return functions[node.type](effectiveVisit, node as any, ...extraArgs);
     }
 
     const functions = {
-      ...defaultVisitorFunctions,
+      ...defaultFunctions[userFunctions.type ?? `replacer`],
       visit: visitNode,
       ...userFunctions,
     };
