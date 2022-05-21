@@ -47,6 +47,7 @@
     "typescript": "^4.6.4"
   },
   "scripts": {
+    "lkg": "yarn peg ./examples/grammar.pegjs.pegjs -o ./sources/lkg-parser.js",
     "prepack": "yarn rollup && yarn peg ./examples/grammar.pegjs.pegjs -o ./lib/grammar.pegjs.js",
     "postpack": "rm -rf lib",
     "peg": "yarn ts-node -T sources/cli.ts",
