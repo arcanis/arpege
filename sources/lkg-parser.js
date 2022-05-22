@@ -145,7 +145,7 @@ function peg$parse(input, options) {
       peg$c1 = function(initializer, value0) {return value0},
       peg$c2 = function(initializer, rules) {
             return {
-              type: `grammar`,
+              type: literal(`grammar`),
               location: location(),
               initializer,
               rules,
@@ -153,7 +153,7 @@ function peg$parse(input, options) {
           },
       peg$c3 = function(code) {
             return {
-              type: `initializer`,
+              type: literal(`initializer`),
               location: location(),
               code: code,
             };
@@ -163,11 +163,11 @@ function peg$parse(input, options) {
       peg$c6 = peg$literalExpectation("=", false),
       peg$c7 = function(name, displayName, expression) {
             return {
-              type: `rule`,
+              type: literal(`rule`),
               location: location(),
               name,
               expression: displayName === null ? expression : {
-                type: `named`,
+                type: literal(`named`),
                 location: location(),
                 name: displayName,
                 expression,
@@ -178,9 +178,7 @@ function peg$parse(input, options) {
       peg$c9 = function(head, tail) {return [head, ...tail]},
       peg$c10 = function(value) {return value ?? []},
       peg$c11 = function(annotations, expression) {
-            return annotations.length === 0 ? expression : Object.assign(expression, {
-              annotations,
-            });
+            return {...expression, annotations: annotations.length > 0 ? annotations : undefined};
           },
       peg$c12 = "/",
       peg$c13 = peg$literalExpectation("/", false),
@@ -189,7 +187,7 @@ function peg$parse(input, options) {
           },
       peg$c15 = function(alternatives) {
             return alternatives.length === 1 ? alternatives[0] : {
-              type: `choice`,
+              type: literal(`choice`),
               location: location(),
               alternatives,
             };
@@ -198,7 +196,7 @@ function peg$parse(input, options) {
       peg$c17 = peg$literalExpectation("^", false),
       peg$c18 = function(expression, code) {
             return {
-              type: `scope`,
+              type: literal(`scope`),
               location: location(),
               code,
               expression,
@@ -207,7 +205,7 @@ function peg$parse(input, options) {
       peg$c19 = function(expression, value0) {return value0},
       peg$c20 = function(expression, code) {
             return code === null ? expression : {
-              type: `action`,
+              type: literal(`action`),
               location: location(),
               code: code ?? ``,
               expression,
@@ -215,7 +213,7 @@ function peg$parse(input, options) {
           },
       peg$c21 = function(elements) {
             return elements.length === 1 ? elements[0] : {
-              type: `sequence`,
+              type: literal(`sequence`),
               location: location(),
               elements,
             };
@@ -224,7 +222,7 @@ function peg$parse(input, options) {
       peg$c23 = peg$literalExpectation(":", false),
       peg$c24 = function(label, expression) {
             return {
-              type: `labeled`,
+              type: literal(`labeled`),
               location: location(),
               label,
               expression,
@@ -234,7 +232,7 @@ function peg$parse(input, options) {
       peg$c26 = peg$literalExpectation("::", false),
       peg$c27 = function(expression) {
             return {
-              type: `labeled`,
+              type: literal(`labeled`),
               location: location(),
               label: null,
               expression,
@@ -278,12 +276,12 @@ function peg$parse(input, options) {
              * `labeled` and `sequence`.
              */
             return expression.type === `labeled` || expression.type === `sequence`
-                ? { type: `group`, expression: expression }
+                ? { type: literal(`group`), expression: expression }
                 : expression;
           },
       peg$c47 = function(name) {
             return {
-              type: `ruleRef`,
+              type: literal(`ruleRef`),
               location: location(),
               name,
             };
@@ -357,16 +355,16 @@ function peg$parse(input, options) {
           },
       peg$c102 = function(name) { return name === `expr` || name.endsWith(`Expr`) },
       peg$c103 = function(name, expression) {
-            return [name, expression];
+            return tuple([name, expression]);
           },
       peg$c104 = function(name, value) {
-            return [name, value];
+            return tuple([name, value]);
           },
       peg$c105 = "i",
       peg$c106 = peg$literalExpectation("i", false),
       peg$c107 = function(value, ignoreCase) {
             return {
-              type: `literal`,
+              type: literal(`literal`),
               location: location(),
               ignoreCase: ignoreCase !== null,
               value,
@@ -394,7 +392,7 @@ function peg$parse(input, options) {
       peg$c127 = peg$otherExpectation("regexp"),
       peg$c128 = function(inverted, parts, ignoreCase) {
               return {
-                type: `class`,
+                type: literal(`class`),
                 location: location(),
                 parts: filterEmptyStrings(parts),
                 inverted: inverted !== null,
@@ -407,7 +405,7 @@ function peg$parse(input, options) {
             if (begin.charCodeAt(0) > end.charCodeAt(0))
               error(`Invalid character range: ${text()}.`);
 
-            return [begin, end];
+            return tuple([begin, end]);
           },
       peg$c132 = function() { return `` },
       peg$c133 = "0",
@@ -448,7 +446,7 @@ function peg$parse(input, options) {
       peg$c166 = peg$literalExpectation(".", false),
       peg$c167 = function() {
             return {
-              type: `any`,
+              type: literal(`any`),
               location: location(),
             };
           },
@@ -577,6 +575,14 @@ function peg$parse(input, options) {
   }
 
   var transforms = [];
+
+  function literal(str) {
+    return str;
+  }
+
+  function tuple(arr) {
+    return arr;
+  }
 
   function text() {
     return input.substring(peg$savedPos, peg$currPos);
@@ -7820,21 +7826,22 @@ function peg$parse(input, options) {
   }
 
 
+
     const OPS_TO_PREFIXED_TYPES = {
-      [`$`]: `text`,
-      [`&`]: `simpleAnd`,
-      [`!`]: `simpleNot`,
+      [`$`]: literal(`text`),
+      [`&`]: literal(`simpleAnd`),
+      [`!`]: literal(`simpleNot`),
     };
 
     const OPS_TO_SUFFIXED_TYPES = {
-      [`?`]: `optional`,
-      [`*`]: `zeroOrMore`,
-      [`+`]: `oneOrMore`,
+      [`?`]: literal(`optional`),
+      [`*`]: literal(`zeroOrMore`),
+      [`+`]: literal(`oneOrMore`),
     };
 
     const OPS_TO_SEMANTIC_PREDICATE_TYPES = {
-      [`&`]: `semanticAnd`,
-      [`!`]: `semanticNot`,
+      [`&`]: literal(`semanticAnd`),
+      [`!`]: literal(`semanticNot`),
     };
 
     function filterEmptyStrings(array) {

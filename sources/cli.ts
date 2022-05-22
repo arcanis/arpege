@@ -46,7 +46,9 @@ runExit({
     });
 
     output = Option.String(`-o,--output`);
-    types = Option.Boolean(`--types`);
+
+    parser = Option.Boolean(`--parser`, true);
+    types = Option.Boolean(`--types`, false);
 
     file = Option.String();
 
@@ -57,19 +59,25 @@ runExit({
         const code = generate(source, {...this.getParserOptions(), output: `types`, format: this.format});
 
         if (typeof this.output !== `undefined`) {
-          await fs.promises.writeFile(`${this.output.replace(/\.cjs$/, ``)}.d.ts`, code);
+          const typesName = this.parser
+            ? `${this.output.replace(/\.c?js$/, ``)}.d.ts`
+            : this.output;
+
+          await fs.promises.writeFile(typesName, code);
         } else {
           this.context.stdout.write(code);
           return;
         }
       }
 
-      const code = generate(source, {...this.getParserOptions(), output: `source`, format: this.format});
+      if (this.parser) {
+        const code = generate(source, {...this.getParserOptions(), output: `source`, format: this.format});
 
-      if (typeof this.output !== `undefined`) {
-        await fs.promises.writeFile(this.output, code);
-      } else {
-        this.context.stdout.write(code);
+        if (typeof this.output !== `undefined`) {
+          await fs.promises.writeFile(this.output, code);
+        } else {
+          this.context.stdout.write(code);
+        }
       }
     }
   },

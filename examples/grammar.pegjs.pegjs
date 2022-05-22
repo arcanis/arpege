@@ -22,23 +22,23 @@
  *
  * [1] http://www.ecma-international.org/publications/standards/Ecma-262.htm
  */
-
 {
+
   const OPS_TO_PREFIXED_TYPES = {
-    [`$`]: `text`,
-    [`&`]: `simpleAnd`,
-    [`!`]: `simpleNot`,
+    [`$`]: literal(`text`),
+    [`&`]: literal(`simpleAnd`),
+    [`!`]: literal(`simpleNot`),
   };
 
   const OPS_TO_SUFFIXED_TYPES = {
-    [`?`]: `optional`,
-    [`*`]: `zeroOrMore`,
-    [`+`]: `oneOrMore`,
+    [`?`]: literal(`optional`),
+    [`*`]: literal(`zeroOrMore`),
+    [`+`]: literal(`oneOrMore`),
   };
 
   const OPS_TO_SEMANTIC_PREDICATE_TYPES = {
-    [`&`]: `semanticAnd`,
-    [`!`]: `semanticNot`,
+    [`&`]: literal(`semanticAnd`),
+    [`!`]: literal(`semanticNot`),
   };
 
   function filterEmptyStrings(array) {
@@ -57,7 +57,7 @@
 Grammar
   = __ initializer:(::Initializer __)? rules:(::Rule __)+ {
       return {
-        type: `grammar`,
+        type: literal(`grammar`),
         location: location(),
         initializer,
         rules,
@@ -67,7 +67,7 @@ Grammar
 Initializer
   = code:CodeBlock EOS {
       return {
-        type: `initializer`,
+        type: literal(`initializer`),
         location: location(),
         code: code,
       };
@@ -78,11 +78,11 @@ Rule
     __ displayName:(::StringLiteral __)? `=` __
     expression:Expression EOS {
       return {
-        type: `rule`,
+        type: literal(`rule`),
         location: location(),
         name,
         expression: displayName === null ? expression : {
-          type: `named`,
+          type: literal(`named`),
           location: location(),
           name: displayName,
           expression,
@@ -92,9 +92,7 @@ Rule
 
 Expression
   = annotations:(@separator(expr: __) Annotation*) __ expression:LeadingChoiceExpression {
-      return annotations.length === 0 ? expression : Object.assign(expression, {
-        annotations,
-      });
+      return {...expression, annotations: annotations.length > 0 ? annotations : undefined};
     }
 
 LeadingChoiceExpression
@@ -105,7 +103,7 @@ LeadingChoiceExpression
 ChoiceExpression
   = alternatives:(@separator(expr: __ `/` __) ScopeExpression+) {
       return alternatives.length === 1 ? alternatives[0] : {
-        type: `choice`,
+        type: literal(`choice`),
         location: location(),
         alternatives,
       };
@@ -114,7 +112,7 @@ ChoiceExpression
 ScopeExpression
   = expression:ActionExpression __ `^` __ code:CodeBlock {
       return {
-        type: `scope`,
+        type: literal(`scope`),
         location: location(),
         code,
         expression,
@@ -125,7 +123,7 @@ ScopeExpression
 ActionExpression
   = expression:SequenceExpression code:(__ ::CodeBlock)? {
       return code === null ? expression : {
-        type: `action`,
+        type: literal(`action`),
         location: location(),
         code: code ?? ``,
         expression,
@@ -135,7 +133,7 @@ ActionExpression
 SequenceExpression
   = elements:(@separator(expr: __) LabeledExpression+) {
       return elements.length === 1 ? elements[0] : {
-        type: `sequence`,
+        type: literal(`sequence`),
         location: location(),
         elements,
       };
@@ -145,7 +143,7 @@ LabeledExpression
   = label:(@token(type: `variable`) Identifier)
     __ `:` __ expression:PrefixedExpression {
       return {
-        type: `labeled`,
+        type: literal(`labeled`),
         location: location(),
         label,
         expression,
@@ -153,7 +151,7 @@ LabeledExpression
     }
   / `::` __ expression:PrefixedExpression {
       return {
-        type: `labeled`,
+        type: literal(`labeled`),
         location: location(),
         label: null,
         expression,
@@ -199,7 +197,8 @@ PrimaryExpression
   / AnyMatcher
   / RuleReferenceExpression
   / SemanticPredicateExpression
-  / `(` __ expression:Expression __ `)` {
+  / (@type(type: `never`)
+    `(` __ expression:Expression __ `)` {
       /*
        * The purpose of the `group` AST node is just to isolate label scope. We
        * don`t need to put it around nodes that can`t contain any labels or
@@ -207,14 +206,14 @@ PrimaryExpression
        * `labeled` and `sequence`.
        */
       return expression.type === `labeled` || expression.type === `sequence`
-          ? { type: `group`, expression: expression }
+          ? { type: literal(`group`), expression: expression }
           : expression;
-    }
+    })
 
 RuleReferenceExpression
   = name:(@token(type: `function`) IdentifierName) !(__ (StringLiteral __)? `=`) {
       return {
-        type: `ruleRef`,
+        type: literal(`ruleRef`),
         location: location(),
         name,
       };
@@ -376,17 +375,17 @@ AnnotationParameters
     }
 
 AnnotationParameter
-  = name:(@token(type: `parameter`) Identifier) &{ return name === `expr` || name.endsWith(`Expr`) } __ `:` __ expression:Expression {
-      return [name, expression];
+  = name:(@token(type: `parameter`) Identifier) &{ return name === `expr` || name.endsWith(`Expr`) } __ `:` __ expression:(@type(type: `unknown`) Expression) {
+      return tuple([name, expression]);
     }
   / name:(@token(type: `parameter`) Identifier) __ `:`__ value:ValueLiteral {
-      return [name, value];
+      return tuple([name, value]);
     }
 
 LiteralMatcher
   = value:StringLiteral ignoreCase:`i`? {
       return {
-        type: `literal`,
+        type: literal(`literal`),
         location: location(),
         ignoreCase: ignoreCase !== null,
         value,
@@ -436,7 +435,7 @@ CharacterClassMatcher `regexp`
       `]`
       ignoreCase:`i`? {
         return {
-          type: `class`,
+          type: literal(`class`),
           location: location(),
           parts: filterEmptyStrings(parts),
           inverted: inverted !== null,
@@ -450,7 +449,7 @@ ClassCharacterRange
       if (begin.charCodeAt(0) > end.charCodeAt(0))
         error(`Invalid character range: ${text()}.`);
 
-      return [begin, end];
+      return tuple([begin, end]);
     }
 
 ClassCharacter
@@ -508,7 +507,7 @@ HexDigit
 AnyMatcher
   = @token(type: `regexp`) `.` {
       return {
-        type: `any`,
+        type: literal(`any`),
         location: location(),
       };
     }

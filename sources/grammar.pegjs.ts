@@ -1,7 +1,6 @@
 import {generate} from 'arpege';
 import fs         from 'fs';
 
-// @ts-expect-error
 import lkgParser  from './lkg-parser';
 
 const grammar = fs.readFileSync(require.resolve(`./grammar.pegjs.pegjs`), `utf8`);

@@ -71,6 +71,8 @@ identifiers =
 
 ### Experimental builtin tokenizer
 
+**Important:** This feature isn't compatible with the `cache: true` option.
+
 Arpege can generate a tokenizer for your grammar by adding the `--tokenizer` flag to the command line (note that in this case, the output will be a parser that will return a stream of tokens but won't be able to parse your file as originally intended; in other words, you may have to generate two parsers: one for the regular parsing, and another for the tokenizer).
 
 The tokenizer tries to be smart and automatically detect the places where tokens should be read:
@@ -114,7 +116,7 @@ Term = Number / (@type(type: `never`) `(` ::Term `)`)
 Number = [0-9]+ { return parseInt(text(), 10) }
 ```
 
-The `TermType` type will then become `NumberType | never`, which TypeScript will coalesce into simply `NumberType`. In more complicated cases, you may have to provide more concrete types; check the `grammar.css.pegjs` file in this repository for some examples.
+The `TermType` type will then become `NumberType | never`, which TypeScript will coalesce into simply `NumberType`. In more complicated cases, you may have to provide more concrete types or even fallback to `unknown` or `any`; check the [`grammar.css.pegjs`](/examples/grammar.css.pegjs) and [`grammar.pegjs.pegjs`](/examples/grammar.pegjs.pegjs) files in this repository for some examples.
 
 ### Backtick strings
 

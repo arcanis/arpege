@@ -63,12 +63,18 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
       ruleParts.push(`type ${getRuleType(ruleName)} = ${type};\n`);
     },
 
-    class(visit, node, context: Context) {
+    class() {
+      return `string`;
+    },
+
+    any() {
       return `string`;
     },
 
     literal(visit, node, context: Context) {
-      return JSON.stringify(node.value);
+      return JSON.stringify(node.value).replace(/[\u007F-\uFFFF]/g, chr => {
+        return `\\u${(`0000${chr.charCodeAt(0).toString(16)}`).slice(-4)}`;
+      });
     },
 
     text(visit, node, context: Context) {
@@ -81,6 +87,22 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
 
     ruleRef(visit, node, context: Context) {
       return getRuleType(node.name);
+    },
+
+    simpleAnd() {
+      return `undefined`;
+    },
+
+    simpleNot() {
+      return `undefined`;
+    },
+
+    semanticAnd() {
+      return `undefined`;
+    },
+
+    semanticNot() {
+      return `undefined`;
     },
 
     sequence(visit, node, context: Context) {
@@ -148,7 +170,7 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
         .map(([name, type]) => `${name}: ${type}`);
 
       const fnName = `peg$type$action${actionParts.length}`;
-      actionParts.push(`const ${fnName} = (${params.join(`, `)}) => PegJS.contributeActionInference(() => {${node.code}});\n`);
+      actionParts.push(`const ${fnName} = (${params.join(`, `)}) => {${node.code}};\n`);
 
       return `ReturnType<typeof ${fnName}>`;
     },
@@ -158,9 +180,7 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
 
   const parts: Array<string> = [];
 
-  parts.push(`interface PegJSInterface {\n`);
-  parts.push(`  contributeActionInference<T>(fn: () => T): T;\n`);
-  parts.push(`}\n`);
+  parts.push(`/* eslint-disable */\n`);
   parts.push(`\n`);
   parts.push(`interface PegJSPosition {\n`);
   parts.push(`  offset: number;\n`);
@@ -175,23 +195,21 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
   parts.push(`\n`);
   parts.push(ast.initializer?.code ?? ``);
   parts.push(`\n`);
-  parts.push(`const PegJS: PegJSInterface = {\n`);
-  parts.push(`  contributeActionInference: ((fn: any) => fn()) as PegJSInterface['contributeActionInference'],\n`);
-  parts.push(`};\n`);
-  parts.push(`\n`);
   parts.push(...actionParts);
   parts.push(`\n`);
   parts.push(...ruleParts);
   parts.push(`\n`);
-  parts.push(`declare type ParseResult = {\n`);
+  parts.push(`declare type ParseResults = {\n`);
 
   for (const rule of ast.rules) {
     const ruleType = getRuleType(rule.name);
-    parts.push(`  ${ruleType}: ${ruleType}\n`);
+    parts.push(`  ${ruleType}: ${ruleType};\n`);
   }
 
   parts.push(`};\n`);
   parts.push(`\n`);
+  parts.push(`declare function literal<T extends string>(val: T): T;\n`);
+  parts.push(`declare function tuple<T extends any[]>(val: [...T]): [...T];\n`);
   parts.push(`declare function error(message: string, location?: PegJSLocation): never;\n`);
   parts.push(`declare function expected(description: string, location?: PegJSLocation): never;\n`);
   parts.push(`declare function onRollback(fn: () => void): void;\n`);
@@ -202,6 +220,10 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
   parts.push(`declare const parse: (data: string) => ParseResult;\n`);
   parts.push(`\n`);
   parts.push(`export {PegJSLocation, PegJSPosition, ParseResults, ParseResult, parse};\n`);
+  parts.push(`\n`);
+  parts.push(`// Only meant to make it easier to debug the grammar types\n`);
+  parts.push(`declare const val: ParseResult;\n`);
+  parts.push(`val;\n`);
 
   ast.code = parts.join(``);
 }

@@ -120,7 +120,6 @@ export const visitor = {
       : visitNode;
 
     function visitNode(node: asts.Node, ...extraArgs: Array<any>): any {
-      if (!functions[node.type]) console.log({node})
       return functions[node.type](effectiveVisit, node as any, ...extraArgs);
     }
 
