@@ -1,6 +1,6 @@
 {
   "name": "arpege",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "packageManager": "yarn@4.0.0-rc.5",
   "description": "Parser generator for JavaScript",
   "keywords": [
@@ -48,7 +48,7 @@
   },
   "scripts": {
     "lkg": "yarn peg ./examples/grammar.pegjs.pegjs -o ./sources/lkg-parser.js --types",
-    "prepack": "yarn rollup && yarn peg ./examples/grammar.pegjs.pegjs -o ./lib/grammar.pegjs.js",
+    "prepack": "rm -rf lib && yarn rollup && yarn peg ./examples/grammar.pegjs.pegjs -o ./lib/grammar.pegjs.js",
     "postpack": "rm -rf lib",
     "peg": "yarn ts-node -T sources/cli.ts",
     "rollup": "NODE_OPTIONS=\"${NODE_OPTIONS:-} --require ts-node/register/transpile-only\" rollup -c"

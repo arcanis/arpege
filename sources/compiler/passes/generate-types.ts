@@ -60,7 +60,7 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
       });
 
       const ruleName = node.name;
-      ruleParts.push(`type ${getRuleType(ruleName)} = ${type};\n`);
+      ruleParts.push(`export type ${getRuleType(ruleName)} = ${type};\n`);
     },
 
     class() {
