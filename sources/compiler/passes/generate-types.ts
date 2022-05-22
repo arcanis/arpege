@@ -23,7 +23,9 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
   function getRuleType(ruleName: string) {
     let ruleType = ruleTypes.get(ruleName);
     if (typeof ruleType === `undefined`) {
-      const camelizedName = `${upperFirst(camelCase(ruleName))}Type`;
+      let camelizedName = `${upperFirst(camelCase(ruleName))}`;
+      if (!camelizedName)
+        camelizedName = `Unknown`;
 
       for (let t = 0; !ruleType; t++) {
         const candidateName = t === 0 ? camelizedName : `${camelizedName}${t}`;
@@ -60,7 +62,7 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
       });
 
       const ruleName = node.name;
-      ruleParts.push(`export type ${getRuleType(ruleName)} = ${type};\n`);
+      ruleParts.push(`  export type ${getRuleType(ruleName)} = ${type};\n`);
     },
 
     class() {
@@ -86,7 +88,7 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
     },
 
     ruleRef(visit, node, context: Context) {
-      return getRuleType(node.name);
+      return `ast.${getRuleType(node.name)}`;
     },
 
     simpleAnd() {
@@ -197,17 +199,21 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
   parts.push(`\n`);
   parts.push(...actionParts);
   parts.push(`\n`);
+  parts.push(`namespace ast {\n`);
   parts.push(...ruleParts);
+  parts.push(`};\n`);
   parts.push(`\n`);
   parts.push(`declare type ParseResults = {\n`);
 
   for (const rule of ast.rules) {
     const ruleType = getRuleType(rule.name);
-    parts.push(`  ${ruleType}: ${ruleType};\n`);
+    parts.push(`  ${ruleType}: ast.${ruleType};\n`);
   }
 
   parts.push(`};\n`);
   parts.push(`\n`);
+  parts.push(`declare function literal<T extends boolean>(val: T): T;\n`);
+  parts.push(`declare function literal<T extends number>(val: T): T;\n`);
   parts.push(`declare function literal<T extends string>(val: T): T;\n`);
   parts.push(`declare function tuple<T extends any[]>(val: [...T]): [...T];\n`);
   parts.push(`declare function error(message: string, location?: PegJSLocation): never;\n`);
@@ -216,10 +222,10 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
   parts.push(`declare function location(): PegJSLocation;\n`);
   parts.push(`declare function text(): string;\n`);
   parts.push(`\n`);
-  parts.push(`type ParseResult = ParseResults['${firstRuleType}'];\n`);
+  parts.push(`type ParseResult = ast.${firstRuleType};\n`);
   parts.push(`declare const parse: (data: string) => ParseResult;\n`);
   parts.push(`\n`);
-  parts.push(`export {PegJSLocation, PegJSPosition, ParseResults, ParseResult, parse};\n`);
+  parts.push(`export {PegJSLocation, PegJSPosition, ParseResults, ParseResult, ast, parse};\n`);
   parts.push(`\n`);
   parts.push(`// Only meant to make it easier to debug the grammar types\n`);
   parts.push(`declare const val: ParseResult;\n`);

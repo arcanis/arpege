@@ -26,17 +26,17 @@ export interface Plugin {
   ): void;
 }
 
-/*
-  * Generates a parser from a specified grammar and returns it.
-  *
-  * The grammar must be a string in the format described by the metagramar in
-  * the parser.pegjs file.
-  *
-  * Throws |peg.parser.SyntaxError| if the grammar contains a syntax error or
-  * |peg.GrammarError| if it contains a semantic error. Note that not all
-  * errors are detected during the generation and some may protrude to the
-  * generated parser and cause its malfunction.
-  */
+/**
+ * Generates a parser from a specified grammar and returns it.
+ *
+ * The grammar must be a string in the format described by the metagramar in
+ * the parser.pegjs file.
+ *
+ * Throws |peg.parser.SyntaxError| if the grammar contains a syntax error or
+ * |peg.GrammarError| if it contains a semantic error. Note that not all
+ * errors are detected during the generation and some may protrude to the
+ * generated parser and cause its malfunction.
+ */
 export function generate(grammar: string, options: Partial<GenerateOptions> = {}): any {
   const config: PegPluginContext = {
     parser: options.parser ?? parser,
