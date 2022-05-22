@@ -71,7 +71,8 @@ identifiers =
 
 ### Experimental builtin tokenizer
 
-**Important:** This feature isn't compatible with the `cache: true` option.
+> **Warning:**
+> This feature isn't compatible with the `cache: true` option.
 
 Arpege can generate a tokenizer for your grammar by adding the `--tokenizer` flag to the command line (note that in this case, the output will be a parser that will return a stream of tokens but won't be able to parse your file as originally intended; in other words, you may have to generate two parsers: one for the regular parsing, and another for the tokenizer).
 
@@ -91,32 +92,38 @@ Decorator =
 
 ### Experimental TypeScript support
 
-Arpege supports generating `.d.ts` files for your parsers by adding the `--types` flag to the command line.
+Arpege supports generating `.d.ts` files for your parsers by adding the `--types` flag to the command line. Unlike [`ts-pegjs`](https://github.com/metadevpro/ts-pegjs) which simply makes the `parser` function return `any`, Arpege attempts to return types that match what the actual parser would return, by using some introspection mechanisms.
 
-Note that unlike [`ts-pegjs`](https://github.com/metadevpro/ts-pegjs), which simply makes the `parser` function return `any`, Arpege attempts to return types that match what the actual parser would return, by using some introspection mechanisms.
+Because it's often a good idea to avoid using TypeScript syntax within parsers (otherwise your generated parser will have to be transpiled by TypeScript, which will complain about various missing types), Arpege provides a few helpers to workaround some common use cases for TypeScript syntax; those helpers will work regardless of the context and can thus be safely referenced from your grammar actions:
 
-Support for this feature is **experimental**. Some bugs may exist, and some APIs may change in the future. The main know problem is that it may generate invalid files if recursion is used. For instance, given the following syntax:
+- The `literal(val: string)` helper will preserve the literal value of `val` (for instance, `literal("foo")` will be typed `"foo"` rather than `string`). You should use it when returning values whose string representation matters (for instance in typical ASTs it would be the `type` fields).
 
-```pegjs
-Term = Number / "(" ::Term ")"
-Number = [0-9]+ { return parseInt(text(), 10) }
-```
+- The `tuple(val: [...any])` function will force TypeScript to type the provided input value as a tuple rather than a non-descriptive array (for instance, `tuple(["hello", 42])` will be typed `[string, number]` instead of `Array<string | number>`).
 
-Arpege will generate the following output:
-
-```ts
-type TermType = NumberType | TermType;
-type NumberType = ReturnType<typeof peg$type$action0>;
-```
-
-TypeScript doesn't support recursive types except in very specific cases, and will degrade `TermType` into `any`. To avoid this, you must use the `@type` annotation which lets you assign a manual type to a node. For example, to ignore the recursive branch, you can manually type it as `never`:
-
-```ts
-Term = Number / (@type(type: `never`) `(` ::Term `)`)
-Number = [0-9]+ { return parseInt(text(), 10) }
-```
-
-The `TermType` type will then become `NumberType | never`, which TypeScript will coalesce into simply `NumberType`. In more complicated cases, you may have to provide more concrete types or even fallback to `unknown` or `any`; check the [`grammar.css.pegjs`](/examples/grammar.css.pegjs) and [`grammar.pegjs.pegjs`](/examples/grammar.pegjs.pegjs) files in this repository for some examples.
+> **Warning**
+> 
+> Support for this feature is **experimental**. Some bugs may exist, and some APIs may change in the future. The main know problem is that it may generate invalid files if recursion is used. For instance, given the following syntax:
+>
+> ```pegjs
+> Term = Number / "(" ::Term ")"
+> Number = [0-9]+ { return parseInt(text(), 10) }
+> ```
+>
+> Arpege will generate the following output:
+> 
+> ```ts
+> type TermType = NumberType | TermType;
+> type NumberType = ReturnType<typeof peg$type$action0>;
+> ```
+>
+> TypeScript doesn't support recursive types except in very specific cases, and will degrade `TermType` into `any`. To avoid this, you must use the `@type` annotation which lets you assign a manual type to a node. For example, to ignore the recursive branch, you can manually type it as `never`:
+>
+> ```ts
+> Term = Number / (@type(type: `never`) `(` ::Term `)`)
+> Number = [0-9]+ { return parseInt(text(), 10) }
+> ```
+> 
+> The `TermType` type will then become `NumberType | never`, which TypeScript will coalesce into simply `NumberType`. In more complicated cases, you may have to provide more concrete types or even fallback to `unknown` or `any`; check the [`grammar.css.pegjs`](/examples/grammar.css.pegjs) and [`grammar.pegjs.pegjs`](/examples/grammar.pegjs.pegjs) files in this repository for some examples.
 
 ### Backtick strings
 
@@ -142,7 +149,8 @@ keyword =
 
 ### Transactional parsing
 
-**Important:** This feature isn't compatible with the `cache: true` option.
+> **Warning:**
+> This feature isn't compatible with the `cache: true` option.
 
 Parsers have access to a new `onRollback` function. This function will be called if Arpege detects that the alternative it follows won't work, and can be used to clean state previously set by your actions. For example:
 
