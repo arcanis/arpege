@@ -71,7 +71,8 @@ identifiers =
 
 ### Experimental builtin tokenizer
 
-> **Warning:**
+> **Warning**
+> 
 > This feature isn't compatible with the `cache: true` option.
 
 Arpege can generate a tokenizer for your grammar by adding the `--tokenizer` flag to the command line (note that in this case, the output will be a parser that will return a stream of tokens but won't be able to parse your file as originally intended; in other words, you may have to generate two parsers: one for the regular parsing, and another for the tokenizer).
@@ -149,7 +150,8 @@ keyword =
 
 ### Transactional parsing
 
-> **Warning:**
+> **Warning**
+> 
 > This feature isn't compatible with the `cache: true` option.
 
 Parsers have access to a new `onRollback` function. This function will be called if Arpege detects that the alternative it follows won't work, and can be used to clean state previously set by your actions. For example:
