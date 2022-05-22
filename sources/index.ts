@@ -43,8 +43,10 @@ export function generate(grammar: string, options: Partial<GenerateOptions> = {}
     passes: compiler.getDefaultPipeline(),
   };
 
-  if (options.output === `types`)
+  if (options.output === `types`) {
+    config.passes.transform = config.passes.transform?.filter(pass => pass !== compiler.passes.transform.removeProxyRules);
     config.passes.generate = [compiler.passes.generate.generateTypes];
+  }
 
   for (const p of options.plugins ?? [])
     p.use(config, options);

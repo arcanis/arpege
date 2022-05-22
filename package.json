@@ -1,6 +1,6 @@
 {
   "name": "arpege",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "packageManager": "yarn@4.0.0-rc.5",
   "description": "Parser generator for JavaScript",
   "keywords": [
