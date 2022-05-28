@@ -25,11 +25,7 @@ abstract class BasePegCommand extends Command {
 
   async catch(err: any) {
     if (err.name === `PegSyntaxError`) {
-      let message = err.message;
-      if (err.location)
-        message = message.replace(/\.$/, ` at line ${err.location.start.line}, column ${err.location.start.column}.`);
-
-      throw new UsageError(message);
+      throw new UsageError(err.message);
     } else {
       throw err;
     }
