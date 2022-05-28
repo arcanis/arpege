@@ -124,6 +124,21 @@ export async function activate(context: vscode.ExtensionContext) {
     return new vscode.Range(start, end);
   }
 
+  function getFullDocumentRange(document: vscode.TextDocument) {
+    const invalidRange = new vscode.Range(0, 0, document.lineCount, 0);
+    const fullRange = document.validateRange(invalidRange);
+
+    return fullRange;
+  }
+
+  function convertErrorToDiagnostic(document: vscode.TextDocument, error: any) {
+    const range = error.location
+      ? getRangeFromToken(new vscode.Position(0, 0), error.location.start.line, error.location.start.column, error.location.end.line, error.location.end.column)
+      : getFullDocumentRange(document);
+
+    return new vscode.Diagnostic(range, error.message, vscode.DiagnosticSeverity.Error);
+  }
+
   function importToken(token: asts.Token, document: vscode.TextDocument, relativeTo: vscode.Position, tokensBuilder: vscode.SemanticTokensBuilder) {
     if (!token.type)
       return null;
@@ -198,7 +213,14 @@ export async function activate(context: vscode.ExtensionContext) {
       const invalidRange = new vscode.Range(0, 0, document.lineCount, 0);
       const fullRange = document.validateRange(invalidRange);
 
-      await importExternalLanguageToken(languageName, document, fullRange, tokensBuilder);
+      try {
+        await importExternalLanguageToken(languageName, document, fullRange, tokensBuilder);
+      } catch (err: any) {
+        diagnosticCollection.set(document.uri, [convertErrorToDiagnostic(document, err)]);
+        throw err;
+      }
+
+      diagnosticCollection.set(document.uri, []);
 
       return tokensBuilder.build();
     },
@@ -209,5 +231,13 @@ export async function activate(context: vscode.ExtensionContext) {
     scheme: `file`,
   };
 
-  vscode.languages.registerDocumentSemanticTokensProvider(selector, provider, legend);
+  const diagnosticCollection = vscode.languages.createDiagnosticCollection(`supersyntax`);
+
+  context.subscriptions.push(
+    vscode.languages.registerDocumentSemanticTokensProvider(selector, provider, legend),
+  );
+
+  context.subscriptions.push(
+    diagnosticCollection,
+  );
 }
