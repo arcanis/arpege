@@ -1,7 +1,7 @@
 {
   "name": "supersyntax",
   "publisher": "arcanis",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "displayName": "SuperSyntax - custom grammars for VSCode",
   "description": "Adds support for Arpege-powered languages in VSCode",
   "repository": {

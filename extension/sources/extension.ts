@@ -68,7 +68,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     if (!Object.prototype.hasOwnProperty.call(parsers, languageName)) {
       if (Object.prototype.hasOwnProperty.call(BUILTIN_GRAMMARS, languageName))
-        return {parserKey: `builtin@${languageName}`, loadGrammar: () => BUILTIN_GRAMMARS[languageName as keyof typeof BUILTIN_GRAMMARS]};
+        return {parserKey: `builtin@${languageName}`, loadGrammar: async () => BUILTIN_GRAMMARS[languageName as keyof typeof BUILTIN_GRAMMARS]};
 
       console.log(`No parser configured for ${languageName}`);
       return null;
