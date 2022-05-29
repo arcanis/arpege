@@ -17,7 +17,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const legend = new vscode.SemanticTokensLegend(tokenTypes, tokenModifiers);
 
   const legendTypeSet = new Set(legend.tokenTypes);
-  const parserCache = new Map<string, any>();
+  const parserCache = new Map<string, any | Promise<any>>();
 
   function getLanguageNameForFile(fileName: string) {
     const fileMatch = fileName.match(/\.([a-z]+)(\.stx)?$/);
@@ -63,7 +63,7 @@ export async function activate(context: vscode.ExtensionContext) {
     return await runNode([`-e`, `fs.createReadStream(require.resolve(process.argv[1])).pipe(process.stdout)`, grammarModule], cwd);
   }
 
-  async function getGrammar(languageName: string) {
+  async function getGrammar(languageName: string): Promise<{parserKey: string, loadGrammar: () => Promise<string | null>} | null> {
     const parsers = vscode.workspace.getConfiguration(`supersyntax`).get(`parsers`) as any;
 
     if (!Object.prototype.hasOwnProperty.call(parsers, languageName)) {
@@ -102,13 +102,20 @@ export async function activate(context: vscode.ExtensionContext) {
       loadGrammar,
     } = languageInfo;
 
-    let parser = parserCache.get(parserKey);
-    if (typeof parser === `undefined`) {
-      parser = generate(await loadGrammar(), {output: `parser`, tokenizer: true});
-      parserCache.set(parserKey, parser);
+    let parserCacheEntry = parserCache.get(parserKey);
+    if (typeof parserCacheEntry === `undefined`) {
+      parserCache.set(parserKey, parserCacheEntry = loadGrammar().then(grammar => {
+        if (!grammar)
+          return null;
+
+        const parser = generate(grammar, {output: `parser`, tokenizer: true});
+        parserCache.set(parserKey, parser);
+
+        return parser;
+      }));
     }
 
-    return parser;
+    return await parserCacheEntry;
   }
 
   const watcher = vscode.workspace.createFileSystemWatcher(`**/*.pegjs`);
