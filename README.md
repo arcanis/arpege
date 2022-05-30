@@ -105,6 +105,10 @@ Because it's often a good idea to avoid using TypeScript syntax within parsers (
 
 - The `tuple(val: [...any])` function will force TypeScript to type the provided input value as a tuple rather than a non-descriptive array (for instance, `tuple(["hello", 42])` will be typed `[string, number]` instead of `Array<string | number>`).
 
+- The `groupBy(arr: T[], prop: keyof T)` will take an array as parameter and turn it into a dictionary, with each key being one of the possible values in `T[prop]` and each value being an array of all corresponding elements. By coupling this function with `literal()`, you can easily return typed directories.
+
+- The `notEmpty(val: any)` function is a predicate suitable for use inside `Array#filter` that removes any `undefined` and `null` value from an array, including from the return type.
+
 #### Type recursion
 
 Despite its best efforts, Arpege may generate invalid files if recursion is used. For instance, given the following syntax:

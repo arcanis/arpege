@@ -2,6 +2,7 @@ import camelCase        from 'lodash/camelCase';
 import upperFirst       from 'lodash/upperFirst';
 
 import * as asts        from '../asts';
+import * as js          from '../js';
 import {visitor}        from '../visitor';
 import {CompileOptions} from '..';
 
@@ -184,6 +185,15 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
 
   parts.push(`/* eslint-disable */\n`);
   parts.push(`\n`);
+
+  const dependencies = Object.entries(options.dependencies);
+  if (dependencies.length > 0) {
+    for (const [variable, source] of dependencies)
+      parts.push(`import ${variable} from "${js.stringEscape(source)}";\n`);
+
+    parts.push(`\n`);
+  }
+
   parts.push(`interface PegJSPosition {\n`);
   parts.push(`  offset: number;\n`);
   parts.push(`  line: number;\n`);
@@ -216,6 +226,8 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
   parts.push(`declare function literal<T extends number>(val: T): T;\n`);
   parts.push(`declare function literal<T extends string>(val: T): T;\n`);
   parts.push(`declare function tuple<T extends any[]>(val: [...T]): [...T];\n`);
+  parts.push(`declare function groupBy<T extends any, TProp extends keyof T>(vals: T[], prop: TProp): {[K in T[TProp]]?: Array<Extract<T, {[_ in TProp]: K}>>};\n`);
+  parts.push(`declare function notEmpty<T>(value: T | null | undefined): value is T;\n`);
   parts.push(`declare function error(message: string, location?: PegJSLocation): never;\n`);
   parts.push(`declare function expected(description: string, location?: PegJSLocation): never;\n`);
   parts.push(`declare function onRollback(fn: () => void): void;\n`);
