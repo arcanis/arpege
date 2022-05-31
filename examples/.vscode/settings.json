@@ -1,6 +1,7 @@
 {
   "npm.packageManager": "yarn",
   "supersyntax.parsers": {
+    "css": "~examples/grammar.css.pegjs",
     "math": "~examples/grammar.math.pegjs",
     "nested": "~examples/grammar.nested.pegjs"
   }

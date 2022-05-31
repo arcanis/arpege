@@ -5,7 +5,7 @@ import {posix}          from 'path';
 import {promisify}      from 'util';
 import * as vscode      from 'vscode';
 
-const execFileP = promisify(execFile);
+const saferEval = eval;
 
 const BUILTIN_GRAMMARS = {
   pegjs: pegjsGrammar,
@@ -29,46 +29,83 @@ export async function activate(context: vscode.ExtensionContext) {
     return fileMatch[1];
   }
 
-  async function loadGrammarFromFs(grammarUri: vscode.Uri) {
-    const grammarData = await vscode.workspace.fs.readFile(grammarUri);
-    return Buffer.from(grammarData).toString(`utf8`);
+  function execFileP(binName: string, args: Array<string>, {stdin}: {stdin?: string} = {}) {
+    return new Promise<{
+      stdout: string;
+      stderr: string;
+    }>((resolve, reject) => {
+      const child = execFile(binName, args, {
+        cwd: vscode.workspace.workspaceFolders![0].uri.fsPath,
+      }, (err, stdout, stderr) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({stdout, stderr});
+        }
+      });
+
+      child.stdin!.end(stdin);
+    });
   }
 
-  async function runNodeViaYarn(args: Array<string>, cwd: vscode.Uri) {
-    const {stdout} = await execFileP(`yarn`, [`node`, ...args], {
-      cwd: cwd.fsPath,
-    });
-
+  async function runNodeViaYarn(args: Array<string>, {stdin}: {stdin?: string} = {}) {
+    const {stdout} = await execFileP(`yarn`, [`node`, ...args], {stdin});
     return stdout;
   }
 
-  async function runNodeDirect(args: Array<string>, cwd: vscode.Uri) {
-    const {stdout} = await execFileP(`node`, args, {
-      cwd: cwd.fsPath,
-    });
-
+  async function runNodeDirect(args: Array<string>, {stdin}: {stdin?: string} = {}) {
+    const {stdout} = await execFileP(`node`, args, {stdin});
     return stdout;
   }
 
-  async function loadGrammarFromPackage(grammarModule: string) {
-    const cwd = vscode.workspace.workspaceFolders?.[0].uri;
-    if (!cwd)
-      return null;
+  const generateFromBuiltinCompiler = async (grammar: string) => {
+    return generate(grammar, {output: `parser`, tokenizer: true});
+  };
+
+  const generateFromProjectCompiler = async (grammarPath: string, grammar: string) => {
+    if (!grammarPath)
+      return generateFromBuiltinCompiler(grammar);
 
     const packageManager = vscode.workspace.getConfiguration(`npm`).get(`packageManager`) as any;
     const runNode = packageManager === `yarn`
       ? runNodeViaYarn
       : runNodeDirect;
 
-    return await runNode([`-e`, `fs.createReadStream(require.resolve(process.argv[1])).pipe(process.stdout)`, grammarModule], cwd);
+    let source: string;
+    try {
+      source = await runNode([`-p`, `require('module').createRequire('arpege', process.argv[1]).generate(fs.readFileSync(0), {output: 'source', tokenizer: true})`, grammarPath], {stdin: grammar});
+    } catch (err) {
+      return generateFromBuiltinCompiler(grammar);
+    }
+
+    return saferEval(source);
+  };
+
+  async function loadGrammarFromFs(grammarUri: vscode.Uri) {
+    const grammarData = await vscode.workspace.fs.readFile(grammarUri);
+    const grammar = Buffer.from(grammarData).toString(`utf8`);
+
+    return generateFromProjectCompiler(grammarUri.fsPath, grammar);
   }
 
-  async function getGrammar(languageName: string): Promise<{parserKey: string, loadGrammar: () => Promise<string | null>} | null> {
+  async function loadGrammarFromPackage(grammarModule: string) {
+    const packageManager = vscode.workspace.getConfiguration(`npm`).get(`packageManager`) as any;
+    const runNode = packageManager === `yarn`
+      ? runNodeViaYarn
+      : runNodeDirect;
+
+    const grammarPath = (await runNode([`-p`, `require.resolve(process.argv[1])`, grammarModule])).trim();
+    const grammar = await runNode([`-e`, `fs.createReadStream(process.argv[1]).pipe(process.stdout)`, grammarPath]);
+
+    return generateFromProjectCompiler(grammarPath, grammar);
+  }
+
+  async function getGrammar(languageName: string): Promise<{parserKey: string, loadGrammar: () => Promise<any | null>} | null> {
     const parsers = vscode.workspace.getConfiguration(`supersyntax`).get(`parsers`) as any;
 
     if (!Object.prototype.hasOwnProperty.call(parsers, languageName)) {
       if (Object.prototype.hasOwnProperty.call(BUILTIN_GRAMMARS, languageName))
-        return {parserKey: `builtin@${languageName}`, loadGrammar: async () => BUILTIN_GRAMMARS[languageName as keyof typeof BUILTIN_GRAMMARS]};
+        return {parserKey: `builtin@${languageName}`, loadGrammar: async () => generateFromBuiltinCompiler(BUILTIN_GRAMMARS[languageName as keyof typeof BUILTIN_GRAMMARS])};
 
       console.log(`No parser configured for ${languageName}`);
       return null;
@@ -104,13 +141,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
     let parserCacheEntry = parserCache.get(parserKey);
     if (typeof parserCacheEntry === `undefined`) {
-      parserCache.set(parserKey, parserCacheEntry = loadGrammar().then(grammar => {
-        if (!grammar)
-          return null;
-
-        const parser = generate(grammar, {output: `parser`, tokenizer: true});
+      parserCache.set(parserKey, parserCacheEntry = loadGrammar().then(parser => {
         parserCache.set(parserKey, parser);
-
         return parser;
       }));
     }

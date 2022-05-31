@@ -797,7 +797,7 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
       `      dict[val[prop]].push(val);`,
       `    }`,
       ``,
-      `    return {};`,
+      `    return dict;`,
       `  }`,
       ``,
       `  function notEmpty(value) {`,

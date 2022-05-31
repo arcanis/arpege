@@ -19,27 +19,6 @@
  * [3] http://www.w3.org/TR/DOM-Level-2-Style/css.html
  */
 
-{
-  function buildExpression(head: TermType, tail: Array<[OperatorType | null, TermType]>) {
-    type Expression = TermType | {
-      type: literal("Expression"),
-      operator: OperatorType | null;
-      left: Expression;
-      right: Expression;
-    };
-
-    let result: Expression = head;
-    for (const [operator, right] of tail)
-      result = {type: `Expression`, operator, left: result, right};
-
-    return result;
-  }
-
-  interface PegJSInterface {
-    contributeActionInference<TName extends string, T extends {type: TName}>(fn: () => T): T;
-  }
-}
-
 start
   = stylesheet:stylesheet comment* { return stylesheet; }
 
@@ -100,12 +79,12 @@ pseudo_page
   = ":" value:IDENT S* { return { type: literal("PseudoSelector"), value: value }; }
 
 operator
-  = "/" S* { return "/"; }
-  / "," S* { return ","; }
+  = "/" S* { return literal("/"); }
+  / "," S* { return literal(","); }
 
 combinator
-  = "+" S* { return "+"; }
-  / ">" S* { return ">"; }
+  = "+" S* { return literal("+"); }
+  / ">" S* { return literal(">"); }
 
 property
   = name:IDENT S* { return name; }
@@ -124,7 +103,7 @@ ruleset
     }
 
 selector
-  = @type(type: "{type: 'Selector', combinator: CombinatorType, left: SelectorType, right: SimpleSelectorType} | SimpleSelectorType")
+  = @type(type: "{type: 'Selector', combinator: ast.Combinator, left: ast.Selector, right: ast.SimpleSelector} | ast.SimpleSelector")
   / left:simple_selector S* combinator:combinator right:selector {
       return {
         type:       literal("Selector"),
@@ -213,7 +192,12 @@ prio
   = IMPORTANT_SYM S*
 
 expr
-  = head:term tail:(operator? term)* { return buildExpression(head, tail); }
+  = @type(type: `{type: "Expression", operator: ast.Operator | null, left: ast.Expr, right: ast.Term} | ast.Term`)
+    head:term tail:(::operator? ::term)* {
+      return tail.reduce((result, [operator, right]) => {
+        return {type: `Expression`, operator, left: result, right};
+      }, head);
+    }
 
 term
   = quantity:(PERCENTAGE / LENGTH / EMS / EXS / ANGLE / TIME / FREQ / NUMBER)
