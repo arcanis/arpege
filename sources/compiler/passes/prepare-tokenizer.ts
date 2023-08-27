@@ -43,7 +43,9 @@ const makeToken = (expression: asts.Expression): asts.Transform => ({
 });
 
 function getTokensInitializer(ast: asts.Ast) {
-  const tokenContexts: Array<any> = [];
+  const tokenContexts: Array<any> = [
+    {type: `syntax`},
+  ];
 
   // We extract all possible token contexts, and use them to generate an array
   // whose type is derived from them.
