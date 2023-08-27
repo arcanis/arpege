@@ -1,6 +1,6 @@
 import * as asts                                   from './compiler/asts';
 import {VisitFn, visitor}                          from './compiler/visitor';
-import {CompileOptions, CompilePipeline, compiler} from './compiler';
+import {CompileOptions, CompilePipeline, UntypedParser, compiler} from './compiler';
 import {GrammarError}                              from './grammar-error';
 import parser                                      from './grammar.pegjs';
 
@@ -37,7 +37,10 @@ export interface Plugin {
  * errors are detected during the generation and some may protrude to the
  * generated parser and cause its malfunction.
  */
-export function generate(grammar: string, options: Partial<GenerateOptions> = {}): any {
+export function generate(grammar: string, options?: Partial<GenerateOptions> & {output?: Exclude<CompileOptions[`output`], `parser`> | undefined}): string;
+export function generate(grammar: string, options: Partial<GenerateOptions> & {output: `parser`}): UntypedParser;
+export function generate(grammar: string, options: Partial<GenerateOptions>): string | UntypedParser;
+export function generate(grammar: string, options: Partial<GenerateOptions> = {}) {
   const config: PegPluginContext = {
     parser: options.parser ?? parser,
     passes: compiler.getDefaultPipeline(),

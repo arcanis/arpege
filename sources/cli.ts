@@ -38,10 +38,12 @@ runExit({
 }, [
   class GeneratePegCommand extends BasePegCommand {
     format = Option.String(`--format`, `commonjs`, {
-      validator: t.isEnum([`amd`, `bare`, `commonjs`, `globals`, `umd`]),
+      validator: t.isEnum([`amd`, `bare`, `commonjs`, `globals`, `umd`] as const),
     });
 
-    output = Option.String(`-o,--output`);
+    output = Option.String(`-o,--output`, {
+      tolerateBoolean: true,
+    });
 
     parser = Option.Boolean(`--parser`, true);
     types = Option.Boolean(`--types`, false);
@@ -51,13 +53,17 @@ runExit({
     async execute() {
       const source = await fs.promises.readFile(this.file, `utf8`);
 
+      const output = this.output === true
+        ? this.file.replace(/\.peg(js)?$/, `.cjs`)
+        : this.output;
+
       if (this.types) {
         const code = generate(source, {...this.getParserOptions(), output: `types`, format: this.format});
 
-        if (typeof this.output !== `undefined`) {
+        if (output) {
           const typesName = this.parser
-            ? `${this.output.replace(/\.c?js$/, ``)}.d.ts`
-            : this.output;
+            ? `${output.replace(/\.c?js$/, ``)}.d.ts`
+            : output;
 
           await fs.promises.writeFile(typesName, code);
         } else {
@@ -69,8 +75,8 @@ runExit({
       if (this.parser) {
         const code = generate(source, {...this.getParserOptions(), output: `source`, format: this.format});
 
-        if (typeof this.output !== `undefined`) {
-          await fs.promises.writeFile(this.output, code);
+        if (output) {
+          await fs.promises.writeFile(output, code);
         } else {
           this.context.stdout.write(code);
         }

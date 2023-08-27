@@ -17,6 +17,10 @@ import {visitor}                  from './visitor';
 
 const saferEval = eval;
 
+export type UntypedParser = {
+  parse: (code: string) => any;
+};
+
 export type CompileOptions = {
   allowedStartRules: Array<string>;
   annotations: Record<string, CompileAnnotation>;
@@ -106,6 +110,40 @@ const getDefaultPipeline = () => ({
   ],
 });
 
+/*
+ * Generates a parser from a specified grammar AST. Throws |peg.GrammarError|
+ * if the AST contains a semantic error. Note that not all errors are detected
+ * during the generation and some may protrude to the generated parser and
+ * cause its malfunction.
+ */
+export function compile(ast: asts.Ast, pipeline: CompilePipeline, userOptions?: Partial<CompileOptions> & {output?: Exclude<CompileOptions[`output`], `parser`> | undefined}): string;
+export function compile(ast: asts.Ast, pipeline: CompilePipeline, userOptions: Partial<CompileOptions> & {output: `parser`}): UntypedParser;
+export function compile(ast: asts.Ast, pipeline: CompilePipeline, userOptions: Partial<CompileOptions>): string | UntypedParser;
+export function compile(ast: asts.Ast, pipeline: CompilePipeline, userOptions: Partial<CompileOptions> = {}) {
+  const options = {
+    ...defaultOptions,
+    allowedStartRules: [ast.rules[0].name],
+    ...userOptions,
+  };
+
+  options.annotations = {
+    ...annotations,
+    ...options.annotations,
+  };
+
+  if (options.output === `parser`)
+    options.format = `bare`;
+
+  for (const passes of Object.values(pipeline))
+    for (const pass of passes)
+      pass(ast, options);
+
+  switch (options.output) {
+    case `parser`: return saferEval(ast.code!);
+    default: return ast.code;
+  }
+}
+
 export const compiler = {
   /**
    * Expression annotations.
@@ -132,34 +170,5 @@ export const compiler = {
    */
   visitor,
 
-  /*
-   * Generates a parser from a specified grammar AST. Throws |peg.GrammarError|
-   * if the AST contains a semantic error. Note that not all errors are detected
-   * during the generation and some may protrude to the generated parser and
-   * cause its malfunction.
-   */
-  compile(ast: asts.Ast, pipeline: CompilePipeline, userOptions: Partial<CompileOptions> = {}) {
-    const options = {
-      ...defaultOptions,
-      allowedStartRules: [ast.rules[0].name],
-      ...userOptions,
-    };
-
-    options.annotations = {
-      ...annotations,
-      ...options.annotations,
-    };
-
-    if (options.output === `parser`)
-      options.format = `bare`;
-
-    for (const passes of Object.values(pipeline))
-      for (const pass of passes)
-        pass(ast, options);
-
-    switch (options.output) {
-      case `parser`: return saferEval(ast.code!);
-      default: return ast.code;
-    }
-  },
+  compile,
 };
