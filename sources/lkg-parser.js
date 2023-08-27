@@ -13,6 +13,9 @@ function peg$subclass(child, parent) {
 }
 
 function peg$SyntaxError(message, expected, found, location) {
+  if (location)
+    message = message.replace(/\.$/, ' at line ' + location.start.line + ', column ' + location.start.column + '.');
+
   this.message  = message;
   this.expected = expected;
   this.found    = found;
@@ -573,8 +576,9 @@ function peg$parse(input, options) {
 
     peg$startRuleFunction = peg$startRuleFunctions[options.startRule];
   }
-
-  var transforms = [];
+  function cast(val) {
+    return val;
+  }
 
   function literal(str) {
     return str;
@@ -582,6 +586,21 @@ function peg$parse(input, options) {
 
   function tuple(arr) {
     return arr;
+  }
+
+  function groupBy(arr, prop) {
+    const dict = {};
+
+    for (const val of arr) {
+      dict[val[prop]] ??= [];
+      dict[val[prop]].push(val);
+    }
+
+    return dict;
+  }
+
+  function notEmpty(value) {
+    return value !== null && value !== undefined;
   }
 
   function text() {
@@ -698,6 +717,22 @@ function peg$parse(input, options) {
 
   function peg$buildSimpleError(message, location) {
     return new peg$SyntaxError(message, null, null, location);
+  }
+
+  function peg$inferToken(tokenStart) {
+    if (tokenStart >= input.length) return null;
+
+    var regex = /\W/g;
+    regex.lastIndex = tokenStart;
+
+    var match = regex.exec(input);
+    var tokenEnd = match ? match.index : input.length;
+    var suffix = tokenEnd - tokenStart > 20 ? '...' : '';
+
+    tokenEnd = Math.min(tokenEnd, tokenStart + 20) - suffix.length;
+    tokenEnd = Math.max(tokenStart + 1, tokenEnd);
+
+    return input.slice(tokenStart, tokenEnd) + suffix;
   }
 
   function peg$buildStructuredError(expected, found, location) {
@@ -7858,17 +7893,19 @@ function peg$parse(input, options) {
   peg$result = peg$startRuleFunction();
 
   if (peg$result !== peg$FAILED && peg$currPos === input.length) {
-    return transforms.reduce((value, transform) => transform(value), peg$result);
+    return peg$result;
   } else {
     if (peg$result !== peg$FAILED && peg$currPos < input.length) {
       peg$fail(peg$endExpectation());
     }
 
+    var invalidToken = peg$inferToken(peg$maxFailPos);
+
     throw peg$buildStructuredError(
       peg$maxFailExpected,
-      peg$maxFailPos < input.length ? input.charAt(peg$maxFailPos) : null,
-      peg$maxFailPos < input.length
-        ? peg$computeLocation(peg$maxFailPos, peg$maxFailPos + 1)
+      invalidToken,
+      invalidToken
+        ? peg$computeLocation(peg$maxFailPos, peg$maxFailPos + invalidToken.length)
         : peg$computeLocation(peg$maxFailPos, peg$maxFailPos)
     );
   }

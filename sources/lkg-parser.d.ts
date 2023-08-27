@@ -516,10 +516,11 @@ declare type ParseResults = {
   Eof: ast.Eof;
 };
 
-declare function literal<T extends boolean>(val: T): T;
-declare function literal<T extends number>(val: T): T;
-declare function literal<T extends string>(val: T): T;
+declare function cast<T>(value: any, fn: () => T): T;
+declare function literal<const T>(val: T): T;
 declare function tuple<T extends any[]>(val: [...T]): [...T];
+declare function groupBy<T extends Record<string, any>, TProp extends keyof T>(vals: T[], prop: TProp): {[K in T[TProp]]?: Array<Extract<T, {[_ in TProp]: K}>>};
+declare function notEmpty<T>(value: T | null | undefined): value is T;
 declare function error(message: string, location?: PegJSLocation): never;
 declare function expected(description: string, location?: PegJSLocation): never;
 declare function onRollback(fn: () => void): void;

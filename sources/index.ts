@@ -1,8 +1,8 @@
-import * as asts                                   from './compiler/asts';
-import {VisitFn, visitor}                          from './compiler/visitor';
+import * as asts                                                  from './compiler/asts';
+import {VisitFn, visitor}                                         from './compiler/visitor';
 import {CompileOptions, CompilePipeline, UntypedParser, compiler} from './compiler';
-import {GrammarError}                              from './grammar-error';
-import parser                                      from './grammar.pegjs';
+import {GrammarError}                                             from './grammar-error';
+import parser                                                     from './grammar.pegjs';
 
 /* PEG.js version (uses semantic versioning). */
 export const VERSION = `0.10.0`;

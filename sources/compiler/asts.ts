@@ -157,6 +157,7 @@ export type Ast = NodeBase & {
   rules: Array<Rule>;
   consts?: Array<string>;
   code?: string;
+  result?: string;
 };
 
 export type Expression =

@@ -1,6 +1,7 @@
-import * as asts        from '../asts';
-import {visitor}        from '../visitor';
-import {CompileOptions} from '..';
+import {readTokenAnnotation} from '../annotations/apply-token';
+import * as asts             from '../asts';
+import {visitor}             from '../visitor';
+import {CompileOptions}      from '..';
 
 const TOKEN_CODE = `
   if (peg$skipTokens)
@@ -41,6 +42,35 @@ const makeToken = (expression: asts.Expression): asts.Transform => ({
   location: expression.location,
 });
 
+function getTokensInitializer(ast: asts.Ast) {
+  const tokenContexts: Array<any> = [];
+
+  // We extract all possible token contexts, and use them to generate an array
+  // whose type is derived from them.
+  visitor.run(ast, {
+    visit: (visit, node) => {
+      const tokenAnnotation = node.annotations?.find(annotation => {
+        return annotation.name === `token`;
+      });
+
+      if (tokenAnnotation) {
+        const parameters = tokenAnnotation.parameters;
+        const {tokenContext} = readTokenAnnotation(parameters);
+
+        tokenContexts.push(tokenContext);
+      }
+
+      return visit(node);
+    },
+  });
+
+  const fakeTokens = tokenContexts.map(tokenContext => {
+    return `{...literal(${JSON.stringify({...tokenContext})}), raw: "", location: location()},\n`;
+  }).join(``);
+
+  return `cast([], () => [\n${fakeTokens}])`;
+}
+
 /*
  * Removes proxy rules -- that is, rules that only delegate to other rule.
  */
@@ -55,7 +85,7 @@ export function prepareTokenizer(ast: asts.Ast, options: CompileOptions) {
   };
 
   ast.initializer.code += `
-    const peg$tokens = [];
+    const peg$tokens = ${getTokensInitializer(ast)};
 
     let peg$skipTokens = false;
     let peg$tokenContext = {type: "syntax"};
@@ -63,9 +93,9 @@ export function prepareTokenizer(ast: asts.Ast, options: CompileOptions) {
     function peg$pushToken(tokenContext = peg$tokenContext) {
       ${TOKEN_CODE}
     }
-
-    transforms = [() => peg$tokens];
   `;
+
+  ast.result = `peg$tokens`;
 
   visitor.run(ast, {
     class(visit, node) {

@@ -778,8 +778,9 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
     ].join(`\n`));
 
     parts.push([
-      ``,
-      `  var transforms = [];`,
+      `  function cast(val) {`,
+      `    return val;`,
+      `  }`,
       ``,
       `  function literal(str) {`,
       `    return str;`,
@@ -968,7 +969,7 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
     parts.push([
       ``,
       `  if (peg$result !== peg$FAILED && peg$currPos === input.length) {`,
-      `    return transforms.reduce((value, transform) => transform(value), peg$result);`,
+      `    return ${ast.result ?? `peg$result`};`,
       `  } else {`,
       `    if (peg$result !== peg$FAILED && peg$currPos < input.length) {`,
       `      peg$fail(peg$endExpectation());`,

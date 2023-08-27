@@ -34,14 +34,19 @@ const makeToken = (expression: asts.Expression, tokenContext: Record<string, any
   location: expression.location,
 });
 
+export function readTokenAnnotation(parameters: Record<string, any>) {
+  const {allowNestedTokens, ...tokenContext} = parameters;
+  return {allowNestedTokens, tokenContext};
+}
+
 export const applyToken: CompileAnnotation = (ast, node, parameters, options) => {
   if (!options.tokenizer)
     return node;
 
-  const {allowNestedTokens, ...tokenInfo} = parameters;
+  const {allowNestedTokens, tokenContext} = readTokenAnnotation(parameters);
   if (allowNestedTokens) {
-    return setTokenContext(node as any, tokenInfo);
+    return setTokenContext(node as any, tokenContext);
   } else {
-    return makeToken(node as any, tokenInfo);
+    return makeToken(node as any, tokenContext);
   }
 };
