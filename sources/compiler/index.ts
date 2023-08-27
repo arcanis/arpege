@@ -1,3 +1,5 @@
+import * as prettier              from 'prettier';
+
 import {applySeparator}           from './annotations/apply-separator';
 import {applyToken}               from './annotations/apply-token';
 import {applyType}                from './annotations/apply-type';
@@ -138,8 +140,11 @@ export function compile(ast: asts.Ast, pipeline: CompilePipeline, userOptions: P
     for (const pass of passes)
       pass(ast, options);
 
+  if (!ast.code)
+    throw new Error(`Assertion failed: No code generated.`);
+
   switch (options.output) {
-    case `parser`: return saferEval(ast.code!);
+    case `parser`: return saferEval(ast.code);
     default: return ast.code;
   }
 }

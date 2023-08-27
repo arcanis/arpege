@@ -1,5 +1,6 @@
 import {Command, Option, runExit, UsageError} from 'clipanion';
 import fs                                     from 'fs';
+import * as prettier                          from 'prettier';
 import * as t                                 from 'typanion';
 import util                                   from 'util';
 
@@ -65,7 +66,7 @@ runExit({
             ? `${output.replace(/\.c?js$/, ``)}.d.ts`
             : output;
 
-          await fs.promises.writeFile(typesName, code);
+          await fs.promises.writeFile(typesName, await prettier.format(code, {parser: `typescript`}));
         } else {
           this.context.stdout.write(code);
           return;
@@ -76,7 +77,7 @@ runExit({
         const code = generate(source, {...this.getParserOptions(), output: `source`, format: this.format});
 
         if (output) {
-          await fs.promises.writeFile(output, code);
+          await fs.promises.writeFile(output, await prettier.format(code, {parser: `acorn`}));
         } else {
           this.context.stdout.write(code);
         }

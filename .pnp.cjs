@@ -48,12 +48,14 @@ const RAW_RUNTIME_STATE =
           ["@types/jest", "npm:27.5.1"],\
           ["@types/lodash", "npm:4.14.182"],\
           ["@types/node", "npm:17.0.31"],\
+          ["@types/prettier", "npm:3.0.0"],\
           ["@yarnpkg/eslint-config", "virtual:a190d1b20b00d9b4ab54dce26c75b942c0d2bed79bfca71949fc03d1482085a7d5360e68ea2fa776621d56cd4b181a4c03be09bf8f4387472b3a47792a2625b8#npm:0.6.0-rc.9"],\
           ["clipanion", "virtual:a190d1b20b00d9b4ab54dce26c75b942c0d2bed79bfca71949fc03d1482085a7d5360e68ea2fa776621d56cd4b181a4c03be09bf8f4387472b3a47792a2625b8#npm:3.2.0-rc.11"],\
           ["eslint", "npm:8.48.0"],\
           ["jest", "virtual:a190d1b20b00d9b4ab54dce26c75b942c0d2bed79bfca71949fc03d1482085a7d5360e68ea2fa776621d56cd4b181a4c03be09bf8f4387472b3a47792a2625b8#npm:29.6.4"],\
           ["lodash", "npm:4.17.21"],\
           ["pegjs", "workspace:scripts/pegjs"],\
+          ["prettier", "npm:3.0.2"],\
           ["pretty-format", "npm:28.1.0"],\
           ["rollup", "npm:2.72.1"],\
           ["rollup-plugin-pegjs", "virtual:a190d1b20b00d9b4ab54dce26c75b942c0d2bed79bfca71949fc03d1482085a7d5360e68ea2fa776621d56cd4b181a4c03be09bf8f4387472b3a47792a2625b8#npm:2.1.3"],\
@@ -1760,6 +1762,16 @@ const RAW_RUNTIME_STATE =
         "linkType": "HARD"\
       }]\
     ]],\
+    ["@types/prettier", [\
+      ["npm:3.0.0", {\
+        "packageLocation": "./.yarn/cache/@types-prettier-npm-3.0.0-6c770110eb-a2a512d304.zip/node_modules/@types/prettier/",\
+        "packageDependencies": [\
+          ["@types/prettier", "npm:3.0.0"],\
+          ["prettier", "npm:3.0.2"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
     ["@types/resolve", [\
       ["npm:1.17.1", {\
         "packageLocation": "./.yarn/cache/@types-resolve-npm-1.17.1-9a8396bef2-dc6a6df507.zip/node_modules/@types/resolve/",\
@@ -2295,12 +2307,14 @@ const RAW_RUNTIME_STATE =
           ["@types/jest", "npm:27.5.1"],\
           ["@types/lodash", "npm:4.14.182"],\
           ["@types/node", "npm:17.0.31"],\
+          ["@types/prettier", "npm:3.0.0"],\
           ["@yarnpkg/eslint-config", "virtual:a190d1b20b00d9b4ab54dce26c75b942c0d2bed79bfca71949fc03d1482085a7d5360e68ea2fa776621d56cd4b181a4c03be09bf8f4387472b3a47792a2625b8#npm:0.6.0-rc.9"],\
           ["clipanion", "virtual:a190d1b20b00d9b4ab54dce26c75b942c0d2bed79bfca71949fc03d1482085a7d5360e68ea2fa776621d56cd4b181a4c03be09bf8f4387472b3a47792a2625b8#npm:3.2.0-rc.11"],\
           ["eslint", "npm:8.48.0"],\
           ["jest", "virtual:a190d1b20b00d9b4ab54dce26c75b942c0d2bed79bfca71949fc03d1482085a7d5360e68ea2fa776621d56cd4b181a4c03be09bf8f4387472b3a47792a2625b8#npm:29.6.4"],\
           ["lodash", "npm:4.17.21"],\
           ["pegjs", "workspace:scripts/pegjs"],\
+          ["prettier", "npm:3.0.2"],\
           ["pretty-format", "npm:28.1.0"],\
           ["rollup", "npm:2.72.1"],\
           ["rollup-plugin-pegjs", "virtual:a190d1b20b00d9b4ab54dce26c75b942c0d2bed79bfca71949fc03d1482085a7d5360e68ea2fa776621d56cd4b181a4c03be09bf8f4387472b3a47792a2625b8#npm:2.1.3"],\
@@ -6677,6 +6691,15 @@ const RAW_RUNTIME_STATE =
         "packageLocation": "./.yarn/cache/prelude-ls-npm-1.2.1-3e4d272a55-0b9d2c7680.zip/node_modules/prelude-ls/",\
         "packageDependencies": [\
           ["prelude-ls", "npm:1.2.1"]\
+        ],\
+        "linkType": "HARD"\
+      }]\
+    ]],\
+    ["prettier", [\
+      ["npm:3.0.2", {\
+        "packageLocation": "./.yarn/cache/prettier-npm-3.0.2-2cbecb9037-9d67f6f57b.zip/node_modules/prettier/",\
+        "packageDependencies": [\
+          ["prettier", "npm:3.0.2"]\
         ],\
         "linkType": "HARD"\
       }]\
