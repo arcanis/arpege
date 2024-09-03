@@ -18,6 +18,24 @@ Arpege can be used similarly to PegJS; at the moment I recommend you to take a l
 
 ## New features
 
+### Command Line
+
+Arpege is distributed with a CLI that makes it easier to interact with your parser. Some useful commands:
+
+```
+# Generates the parser on the standard output
+yarn peg path/to/grammar.pegjs
+
+# Generates path/to/grammar.cjs
+yarn peg path/to/grammar.pegjs -o
+
+# Prints the result of the parser called on the given file
+yarn peg path/to/grammar.pegjs --input-file ./my-file.txt
+
+# Prints the result of the parser called on the given string
+yarn peg path/to/grammar.pegjs --input-data '1 + 2'
+```
+
 ### SuperSyntax
 
 SuperSyntax is a [VSCode extension](https://marketplace.visualstudio.com/items?itemName=arcanis.supersyntax) that lets you write PegJS grammar to highlight your custom languages. To see an example in practice, add Arpege to your project, install the extension, add the following to your `settings.json` file (the `~` means that the grammar will be retrieved from your dependencies):
@@ -99,15 +117,9 @@ Decorator =
 
 Arpege supports generating `.d.ts` files for your parsers by adding the `--types` flag to the command line. Unlike [`ts-pegjs`](https://github.com/metadevpro/ts-pegjs) which simply makes the `parser` function return `any`, Arpege attempts to return types that match what the actual parser would return, by using some introspection mechanisms.
 
-Because it's often a good idea to avoid using TypeScript syntax within parsers (otherwise your generated parser will have to be transpiled by TypeScript, which will complain about various missing types), Arpege provides a few helpers to workaround some common use cases for TypeScript syntax; those helpers will work regardless of the context and can thus be safely referenced from your grammar actions:
+The generated parsers have also access to the following helpers which often prove useful in grammar actions:
 
-- The `literal(val: string)` helper will preserve the literal value of `val` (for instance, `literal("foo")` will be typed `"foo"` rather than `string`). You should use it when returning values whose string representation matters (for instance in typical ASTs it would be the `type` fields).
-
-- The `tuple(val: [...any])` function will force TypeScript to type the provided input value as a tuple rather than a non-descriptive array (for instance, `tuple(["hello", 42])` will be typed `[string, number]` instead of `Array<string | number>`).
-
-- The `groupBy(arr: T[], prop: keyof T)` will take an array as parameter and turn it into a dictionary, with each key being one of the possible values in `T[prop]` and each value being an array of all corresponding elements. By coupling this function with `literal()`, you can easily return typed directories.
-
-- The `notEmpty(val: any)` function is a predicate suitable for use inside `Array#filter` that removes any `undefined` and `null` value from an array, including from the return type.
+- The `tuple(val: [...any])` function will force TypeScript to type the provided input value as a tuple rather than a non-descriptive array (for instance, `tuple(["hello", 42])` will be typed `[string, number]` instead of `Array<string | number>`). Workaround for the lack of [`as tuple`](https://github.com/microsoft/TypeScript/issues/48052).
 
 #### Type recursion
 

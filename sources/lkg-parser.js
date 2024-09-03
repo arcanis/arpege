@@ -1,4 +1,4 @@
-/* @eslint-disable */
+/* eslint-disable */
 
 "use strict";
 
@@ -175,7 +175,7 @@ function peg$parse(input, options) {
     },
     peg$c2 = function (initializer, rules) {
       return {
-        type: literal(`grammar`),
+        type: `grammar`,
         location: location(),
         initializer,
         rules,
@@ -183,7 +183,7 @@ function peg$parse(input, options) {
     },
     peg$c3 = function (code) {
       return {
-        type: literal(`initializer`),
+        type: `initializer`,
         location: location(),
         code: code,
       };
@@ -195,14 +195,14 @@ function peg$parse(input, options) {
     peg$c6 = peg$literalExpectation("=", false),
     peg$c7 = function (name, displayName, expression) {
       return {
-        type: literal(`rule`),
+        type: `rule`,
         location: location(),
         name,
         expression:
           displayName === null
             ? expression
             : {
-                type: literal(`named`),
+                type: `named`,
                 location: location(),
                 name: displayName,
                 expression,
@@ -233,7 +233,7 @@ function peg$parse(input, options) {
       return alternatives.length === 1
         ? alternatives[0]
         : {
-            type: literal(`choice`),
+            type: `choice`,
             location: location(),
             alternatives,
           };
@@ -242,7 +242,7 @@ function peg$parse(input, options) {
     peg$c17 = peg$literalExpectation("^", false),
     peg$c18 = function (expression, code) {
       return {
-        type: literal(`scope`),
+        type: `scope`,
         location: location(),
         code,
         expression,
@@ -255,7 +255,7 @@ function peg$parse(input, options) {
       return code === null
         ? expression
         : {
-            type: literal(`action`),
+            type: `action`,
             location: location(),
             code: code ?? ``,
             expression,
@@ -265,7 +265,7 @@ function peg$parse(input, options) {
       return elements.length === 1
         ? elements[0]
         : {
-            type: literal(`sequence`),
+            type: `sequence`,
             location: location(),
             elements,
           };
@@ -274,7 +274,7 @@ function peg$parse(input, options) {
     peg$c23 = peg$literalExpectation(":", false),
     peg$c24 = function (label, expression) {
       return {
-        type: literal(`labeled`),
+        type: `labeled`,
         location: location(),
         label,
         expression,
@@ -284,7 +284,7 @@ function peg$parse(input, options) {
     peg$c26 = peg$literalExpectation("::", false),
     peg$c27 = function (expression) {
       return {
-        type: literal(`labeled`),
+        type: `labeled`,
         location: location(),
         label: null,
         expression,
@@ -328,12 +328,12 @@ function peg$parse(input, options) {
        * `labeled` and `sequence`.
        */
       return expression.type === `labeled` || expression.type === `sequence`
-        ? { type: literal(`group`), expression: expression }
+        ? { type: `group`, expression: expression }
         : expression;
     },
     peg$c47 = function (name) {
       return {
-        type: literal(`ruleRef`),
+        type: `ruleRef`,
         location: location(),
         name,
       };
@@ -430,7 +430,7 @@ function peg$parse(input, options) {
     peg$c106 = peg$literalExpectation("i", false),
     peg$c107 = function (value, ignoreCase) {
       return {
-        type: literal(`literal`),
+        type: `literal`,
         location: location(),
         ignoreCase: ignoreCase !== null,
         value,
@@ -470,9 +470,9 @@ function peg$parse(input, options) {
     peg$c127 = peg$otherExpectation("regexp"),
     peg$c128 = function (inverted, parts, ignoreCase) {
       return {
-        type: literal(`class`),
+        type: `class`,
         location: location(),
-        parts: filterEmptyStrings(parts),
+        parts: parts.filter((part) => part !== ``),
         inverted: inverted !== null,
         ignoreCase: ignoreCase !== null,
       };
@@ -547,7 +547,7 @@ function peg$parse(input, options) {
     peg$c166 = peg$literalExpectation(".", false),
     peg$c167 = function () {
       return {
-        type: literal(`any`),
+        type: `any`,
         location: location(),
       };
     },
@@ -2624,31 +2624,8 @@ function peg$parse(input, options) {
 
     peg$startRuleFunction = peg$startRuleFunctions[options.startRule];
   }
-  function cast(val) {
-    return val;
-  }
-
-  function literal(str) {
-    return str;
-  }
-
   function tuple(arr) {
     return arr;
-  }
-
-  function groupBy(arr, prop) {
-    const dict = {};
-
-    for (const val of arr) {
-      dict[val[prop]] ??= [];
-      dict[val[prop]].push(val);
-    }
-
-    return dict;
-  }
-
-  function notEmpty(value) {
-    return value !== null && value !== undefined;
   }
 
   function text() {
@@ -10331,30 +10308,21 @@ function peg$parse(input, options) {
   }
 
   const OPS_TO_PREFIXED_TYPES = {
-    [`$`]: literal(`text`),
-    [`&`]: literal(`simpleAnd`),
-    [`!`]: literal(`simpleNot`),
+    [`$`]: `text`,
+    [`&`]: `simpleAnd`,
+    [`!`]: `simpleNot`,
   };
 
   const OPS_TO_SUFFIXED_TYPES = {
-    [`?`]: literal(`optional`),
-    [`*`]: literal(`zeroOrMore`),
-    [`+`]: literal(`oneOrMore`),
+    [`?`]: `optional`,
+    [`*`]: `zeroOrMore`,
+    [`+`]: `oneOrMore`,
   };
 
   const OPS_TO_SEMANTIC_PREDICATE_TYPES = {
-    [`&`]: literal(`semanticAnd`),
-    [`!`]: literal(`semanticNot`),
+    [`&`]: `semanticAnd`,
+    [`!`]: `semanticNot`,
   };
-
-  function filterEmptyStrings(array) {
-    const result = [];
-
-    for (let i = 0; i < array.length; i++)
-      if (array[i] !== ``) result.push(array[i]);
-
-    return result;
-  }
 
   peg$result = peg$startRuleFunction();
 

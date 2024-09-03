@@ -1,5 +1,3 @@
-import * as prettier              from 'prettier';
-
 import {applySeparator}           from './annotations/apply-separator';
 import {applyToken}               from './annotations/apply-token';
 import {applyType}                from './annotations/apply-type';
@@ -29,7 +27,7 @@ export type CompileOptions = {
   cache: boolean;
   dependencies: Record<string, string>;
   exportVar: string | null;
-  format: `amd` | `bare` | `commonjs` | `globals` | `umd`;
+  format: `amd` | `bare` | `commonjs` | `globals` | `typescript` | `umd`;
   output: `parser` | `source` | `types`;
   tokenizer: boolean;
   trace: boolean;

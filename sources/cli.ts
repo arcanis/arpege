@@ -63,10 +63,15 @@ runExit({
 
         if (output) {
           const typesName = this.parser
-            ? `${output.replace(/\.c?js$/, ``)}.d.ts`
+            ? `${output.replace(/\.c?js$/, ``)}.types.ts`
             : output;
 
           await fs.promises.writeFile(typesName, await prettier.format(code, {parser: `typescript`}));
+
+          if (this.parser) {
+            const baseName = output.replace(/\.c?js$/, ``);
+            await fs.promises.writeFile(`${baseName}.d.ts`, `export * from './${baseName}.types';\n`);
+          }
         } else {
           this.context.stdout.write(code);
           return;

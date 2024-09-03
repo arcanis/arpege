@@ -9,5 +9,6 @@
   "supersyntax.languages": {
     "arithmetics": "./examples/arithmetics.pegjs"
   },
-  "npm.packageManager": "yarn"
+  "npm.packageManager": "yarn",
+  "prettier.prettierPath": ".yarn/sdks/prettier/index.cjs"
 }

@@ -1,5 +1,6 @@
+import {transformSync}  from '@swc/wasm-typescript';
+
 import * as arrays      from '../../utils/arrays';
-import {VERSION}        from '../..';
 import * as asts        from '../asts';
 import * as js          from '../js';
 import * as op          from '../opcodes';
@@ -778,31 +779,8 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
     ].join(`\n`));
 
     parts.push([
-      `  function cast(val) {`,
-      `    return val;`,
-      `  }`,
-      ``,
-      `  function literal(str) {`,
-      `    return str;`,
-      `  }`,
-      ``,
       `  function tuple(arr) {`,
       `    return arr;`,
-      `  }`,
-      ``,
-      `  function groupBy(arr, prop) {`,
-      `    const dict = {};`,
-      ``,
-      `    for (const val of arr) {`,
-      `      dict[val[prop]] ??= [];`,
-      `      dict[val[prop]].push(val);`,
-      `    }`,
-      ``,
-      `    return dict;`,
-      `  }`,
-      ``,
-      `  function notEmpty(value) {`,
-      `    return value !== null && value !== undefined;`,
       `  }`,
       ``,
       `  function text() {`,
@@ -1012,7 +990,7 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
     var generators = {
       typescript() {
         return [
-          `/* @eslint-disable */`,
+          `/* eslint-disable */`,
           ``,
           toplevelCode,
           ``,
@@ -1022,7 +1000,7 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
 
       bare() {
         return [
-          `/* @eslint-disable */`,
+          `/* eslint-disable */`,
           ``,
           `(function() {`,
           `  "use strict";`,
@@ -1047,7 +1025,7 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
           );
 
         parts.push([
-          `/* @eslint-disable */`,
+          `/* eslint-disable */`,
           ``,
           `"use strict";`,
           ``,
@@ -1081,7 +1059,7 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
           params         = dependencyVars.join(`, `);
 
         return [
-          `/* @eslint-disable */`,
+          `/* eslint-disable */`,
           ``,
           `define(${dependencies}, function(${params}) {`,
           `  "use strict";`,
@@ -1096,7 +1074,7 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
 
       globals() {
         return [
-          `/* @eslint-disable */`,
+          `/* eslint-disable */`,
           ``,
           `(function(root) {`,
           `  "use strict";`,
@@ -1128,7 +1106,7 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
           params         = dependencyVars.join(`, `);
 
         parts.push([
-          `/* @eslint-disable */`,
+          `/* eslint-disable */`,
           ``,
           `(function(root, factory) {`,
           `  if (typeof define === "function" && define.amd) {`,
@@ -1160,7 +1138,12 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
       },
     };
 
-    return generators[options.format]();
+    let result = generators[options.format]();
+
+    if (options.format !== `typescript`)
+      result = transformSync(result).code;
+
+    return result;
   }
 
   ast.code = generateWrapper(generateToplevel());

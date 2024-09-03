@@ -222,11 +222,7 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
 
   parts.push(`};\n`);
   parts.push(`\n`);
-  parts.push(`declare function cast<T>(value: any, fn: () => T): T;\n`);
-  parts.push(`declare function literal<const T>(val: T): T;\n`);
   parts.push(`declare function tuple<T extends any[]>(val: [...T]): [...T];\n`);
-  parts.push(`declare function groupBy<T extends Record<string, any>, TProp extends keyof T>(vals: T[], prop: TProp): {[K in T[TProp]]?: Array<Extract<T, {[_ in TProp]: K}>>};\n`);
-  parts.push(`declare function notEmpty<T>(value: T | null | undefined): value is T;\n`);
   parts.push(`declare function error(message: string, location?: PegJSLocation): never;\n`);
   parts.push(`declare function expected(description: string, location?: PegJSLocation): never;\n`);
   parts.push(`declare function onRollback(fn: () => void): void;\n`);

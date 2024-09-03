@@ -23,33 +23,22 @@
  * [1] http://www.ecma-international.org/publications/standards/Ecma-262.htm
  */
 {
-
   const OPS_TO_PREFIXED_TYPES = {
-    [`$`]: literal(`text`),
-    [`&`]: literal(`simpleAnd`),
-    [`!`]: literal(`simpleNot`),
+    [`$`]: `text` as const,
+    [`&`]: `simpleAnd` as const,
+    [`!`]: `simpleNot` as const,
   };
 
   const OPS_TO_SUFFIXED_TYPES = {
-    [`?`]: literal(`optional`),
-    [`*`]: literal(`zeroOrMore`),
-    [`+`]: literal(`oneOrMore`),
+    [`?`]: `optional` as const,
+    [`*`]: `zeroOrMore` as const,
+    [`+`]: `oneOrMore` as const,
   };
 
   const OPS_TO_SEMANTIC_PREDICATE_TYPES = {
-    [`&`]: literal(`semanticAnd`),
-    [`!`]: literal(`semanticNot`),
+    [`&`]: `semanticAnd` as const,
+    [`!`]: `semanticNot` as const,
   };
-
-  function filterEmptyStrings(array) {
-    const result = [];
-
-    for (let i = 0; i < array.length; i++)
-      if (array[i] !== ``)
-        result.push(array[i]);
-
-    return result;
-  }
 }
 
 /* ---- Syntactic Grammar ----- */
@@ -57,7 +46,7 @@
 Grammar
   = __ initializer:(::Initializer __)? rules:(::Rule __)+ {
       return {
-        type: literal(`grammar`),
+        type: `grammar` as const,
         location: location(),
         initializer,
         rules,
@@ -67,7 +56,7 @@ Grammar
 Initializer
   = code:CodeBlock EOS {
       return {
-        type: literal(`initializer`),
+        type: `initializer` as const,
         location: location(),
         code: code,
       };
@@ -78,11 +67,11 @@ Rule
     __ displayName:(::StringLiteral __)? `=` __
     expression:Expression EOS {
       return {
-        type: literal(`rule`),
+        type: `rule` as const,
         location: location(),
         name,
         expression: displayName === null ? expression : {
-          type: literal(`named`),
+          type: `named` as const,
           location: location(),
           name: displayName,
           expression,
@@ -103,7 +92,7 @@ LeadingChoiceExpression
 ChoiceExpression
   = alternatives:(@separator(expr: __ `/` __) ScopeExpression+) {
       return alternatives.length === 1 ? alternatives[0] : {
-        type: literal(`choice`),
+        type: `choice` as const,
         location: location(),
         alternatives,
       };
@@ -112,7 +101,7 @@ ChoiceExpression
 ScopeExpression
   = expression:ActionExpression __ `^` __ code:CodeBlock {
       return {
-        type: literal(`scope`),
+        type: `scope` as const,
         location: location(),
         code,
         expression,
@@ -123,7 +112,7 @@ ScopeExpression
 ActionExpression
   = expression:SequenceExpression code:(__ ::CodeBlock)? {
       return code === null ? expression : {
-        type: literal(`action`),
+        type: `action` as const,
         location: location(),
         code: code ?? ``,
         expression,
@@ -133,7 +122,7 @@ ActionExpression
 SequenceExpression
   = elements:(@separator(expr: __) LabeledExpression+) {
       return elements.length === 1 ? elements[0] : {
-        type: literal(`sequence`),
+        type: `sequence` as const,
         location: location(),
         elements,
       };
@@ -143,7 +132,7 @@ LabeledExpression
   = label:(@token(type: `variable`) Identifier)
     __ `:` __ expression:PrefixedExpression {
       return {
-        type: literal(`labeled`),
+        type: `labeled` as const,
         location: location(),
         label,
         expression,
@@ -151,7 +140,7 @@ LabeledExpression
     }
   / `::` __ expression:PrefixedExpression {
       return {
-        type: literal(`labeled`),
+        type: `labeled` as const,
         location: location(),
         label: null,
         expression,
@@ -206,14 +195,14 @@ PrimaryExpression
        * `labeled` and `sequence`.
        */
       return expression.type === `labeled` || expression.type === `sequence`
-          ? { type: literal(`group`), expression: expression }
+          ? { type: `group` as const, expression: expression }
           : expression;
     })
 
 RuleReferenceExpression
   = name:(@token(type: `function`) IdentifierName) !(__ (StringLiteral __)? `=`) {
       return {
-        type: literal(`ruleRef`),
+        type: `ruleRef` as const,
         location: location(),
         name,
       };
@@ -385,7 +374,7 @@ AnnotationParameter
 LiteralMatcher
   = value:StringLiteral ignoreCase:`i`? {
       return {
-        type: literal(`literal`),
+        type: `literal` as const,
         location: location(),
         ignoreCase: ignoreCase !== null,
         value,
@@ -394,7 +383,7 @@ LiteralMatcher
 
 ValueLiteral
   = StringLiteral
-  / ArrayLiteral
+  / (@type(type: `unknown`) ArrayLiteral)
   / BooleanLiteral { return JSON.parse(text()) }
   / NullLiteral { return null }
 
@@ -435,9 +424,9 @@ CharacterClassMatcher `regexp`
       `]`
       ignoreCase:`i`? {
         return {
-          type: literal(`class`),
+          type: `class` as const,
           location: location(),
-          parts: filterEmptyStrings(parts),
+          parts: parts.filter(part => part !== ``),
           inverted: inverted !== null,
           ignoreCase: ignoreCase !== null,
         };
@@ -507,7 +496,7 @@ HexDigit
 AnyMatcher
   = @token(type: `regexp`) `.` {
       return {
-        type: literal(`any`),
+        type: `any` as const,
         location: location(),
       };
     }

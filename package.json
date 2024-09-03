@@ -1,7 +1,7 @@
 {
   "name": "arpege",
-  "version": "2.0.1",
-  "packageManager": "yarn@4.0.0-rc.50",
+  "version": "2.1.0",
+  "packageManager": "yarn@4.4.1",
   "description": "Parser generator for JavaScript",
   "keywords": [
     "parser generator",
@@ -13,7 +13,8 @@
   "author": "David Majda <david@majda.cz> (http://majda.cz/)",
   "main": "sources/index.ts",
   "bin": {
-    "peg": "sources/cli.ts"
+    "peg": "sources/cli.ts",
+    "arpege": "sources/cli.ts"
   },
   "workspaces": [
     "examples",
@@ -21,11 +22,12 @@
     "scripts/pegjs"
   ],
   "dependencies": {
-    "clipanion": "^3.2.0-rc.11",
+    "@swc/wasm-typescript": "^1.7.23",
+    "clipanion": "^4.0.0-rc.3",
     "lodash": "^4.17.21",
-    "prettier": "^3.0.2",
+    "prettier": "^3.3.3",
     "tslib": "^2.4.0",
-    "typanion": "^3.8.0"
+    "typanion": "^3.14.0"
   },
   "devDependencies": {
     "@rollup/plugin-alias": "^3.1.9",
@@ -34,7 +36,7 @@
     "@rollup/plugin-typescript": "^8.3.2",
     "@types/jest": "^27.5.1",
     "@types/lodash": "^4",
-    "@types/node": "^17.0.31",
+    "@types/node": "^22.5.2",
     "@types/prettier": "^3",
     "@yarnpkg/eslint-config": "^0.6.0-rc.9",
     "eslint": "^8.48.0",
@@ -46,7 +48,7 @@
     "rollup-plugin-string": "^3.0.0",
     "ts-jest": "^29.1.1",
     "ts-node": "^10.9.1",
-    "typescript": "^5.2.2"
+    "typescript": "^5.5.4"
   },
   "scripts": {
     "lkg": "yarn peg ./examples/grammar.pegjs.pegjs --output=./sources/lkg-parser.js --types",
@@ -62,7 +64,8 @@
   "publishConfig": {
     "main": "lib/index",
     "bin": {
-      "peg": "lib/cli"
+      "peg": "lib/cli",
+      "arpege": "lib/cli"
     }
   }
 }
