@@ -1,5 +1,6 @@
 import {Command, Option, runExit, UsageError} from 'clipanion';
 import fs                                     from 'fs';
+import path                                   from 'path';
 import * as prettier                          from 'prettier';
 import * as t                                 from 'typanion';
 import util                                   from 'util';
@@ -70,7 +71,7 @@ runExit({
 
           if (this.parser) {
             const baseName = output.replace(/\.c?js$/, ``);
-            await fs.promises.writeFile(`${baseName}.d.ts`, `export * from './${baseName}.types';\n`);
+            await fs.promises.writeFile(`${baseName}.d.ts`, `export * from './${path.basename(baseName)}.types';\n`);
           }
         } else {
           this.context.stdout.write(code);
