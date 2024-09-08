@@ -27,8 +27,9 @@ export type CompileOptions = {
   cache: boolean;
   dependencies: Record<string, string>;
   exportVar: string | null;
-  format: `amd` | `bare` | `commonjs` | `globals` | `typescript` | `umd`;
+  format: `bare` | `commonjs` | `esm` | `typescript`;
   output: `parser` | `source` | `types`;
+  parameters: Set<string>;
   tokenizer: boolean;
   trace: boolean;
 };
@@ -42,6 +43,7 @@ export const defaultOptions: CompileOptions = {
   format: `bare`,
   output: `parser`,
   tokenizer: false,
+  parameters: new Set(),
   trace: false,
 };
 

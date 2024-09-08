@@ -739,6 +739,16 @@ export function generateBytecode(ast: asts.Ast) {
         [op.FAIL, expectedIndex],
       );
     },
+
+    end() {
+      const expectedIndex = addConst(`peg$endExpectation()`);
+
+      return buildCondition(
+        [op.MATCH_END],
+        [op.ACCEPT_N, 0],
+        [op.FAIL, expectedIndex],
+      );
+    },
   });
 
   const generate = (ast: asts.Node, context?: Context) => {

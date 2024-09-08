@@ -25,36 +25,37 @@ export const WHILE_NOT_ERROR = 16;   // WHILE_NOT_ERROR b
 
 /* Matching */
 
-export const MATCH_ANY = 17;   // MATCH_ANY a, f, ...
-export const MATCH_STRING = 18;   // MATCH_STRING s, a, f, ...
-export const MATCH_STRING_IC = 19;   // MATCH_STRING_IC s, a, f, ...
-export const MATCH_REGEXP = 20;   // MATCH_REGEXP r, a, f, ...
-export const ACCEPT_N = 21;   // ACCEPT_N n
-export const ACCEPT_STRING = 22;   // ACCEPT_STRING s
-export const FAIL = 23;   // FAIL e
+export const MATCH_END = 17;   // MATCH_END
+export const MATCH_ANY = 18;   // MATCH_ANY a, f, ...
+export const MATCH_STRING = 19;   // MATCH_STRING s, a, f, ...
+export const MATCH_STRING_IC = 20;   // MATCH_STRING_IC s, a, f, ...
+export const MATCH_REGEXP = 21;   // MATCH_REGEXP r, a, f, ...
+export const ACCEPT_N = 22;   // ACCEPT_N n
+export const ACCEPT_STRING = 23;   // ACCEPT_STRING s
+export const FAIL = 24;   // FAIL e
 
 /* Calls */
 
-export const LOAD_SAVED_POS = 24;   // LOAD_SAVED_POS p
-export const UPDATE_SAVED_POS = 25;   // UPDATE_SAVED_POS
-export const CALL = 26;   // CALL f, n, pc, p1, p2, ..., pN
+export const LOAD_SAVED_POS = 25;   // LOAD_SAVED_POS p
+export const UPDATE_SAVED_POS = 26;   // UPDATE_SAVED_POS
+export const CALL = 27;   // CALL f, n, pc, p1, p2, ..., pN
 
 /* Rules */
 
-export const RULE = 27;   // RULE r
+export const RULE = 28;   // RULE r
 
 /* Failure Reporting */
 
-export const SILENT_FAILS_ON = 28;   // SILENT_FAILS_ON
-export const SILENT_FAILS_OFF = 29;    // SILENT_FAILS_OFF
+export const SILENT_FAILS_ON = 29;   // SILENT_FAILS_ON
+export const SILENT_FAILS_OFF = 30;    // SILENT_FAILS_OFF
 
 /* Cleanup functions */
 
-export const BEGIN_TRANSACTION = 30;   // BEGIN_TRANSACTION
-export const ROLLBACK_TRANSACTION = 31;   // ROLLBACK_TRANSACTION
-export const COMMIT_TRANSACTION = 32;   // COMMIT_TRANSACTION
+export const BEGIN_TRANSACTION = 31;   // BEGIN_TRANSACTION
+export const ROLLBACK_TRANSACTION = 32;   // ROLLBACK_TRANSACTION
+export const COMMIT_TRANSACTION = 33;   // COMMIT_TRANSACTION
 
 /* Data sharing */
 
-export const ENTER_SCOPE = 33;   // ENTER_SCOPE f, n, pc, p1, p2, ..., pN
-export const EXIT_SCOPE = 34;   // EXIT_SCOPE
+export const ENTER_SCOPE = 34;   // ENTER_SCOPE f, n, pc, p1, p2, ..., pN
+export const EXIT_SCOPE = 35;   // EXIT_SCOPE

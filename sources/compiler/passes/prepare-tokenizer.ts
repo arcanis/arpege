@@ -67,10 +67,10 @@ function getTokensInitializer(ast: asts.Ast) {
   });
 
   const fakeTokens = tokenContexts.map(tokenContext => {
-    return `{...literal(${JSON.stringify({...tokenContext})}), raw: "", location: location()},\n`;
+    return `{...${JSON.stringify({...tokenContext})} as const, raw: "", location: location()},\n`;
   }).join(``);
 
-  return `cast([], () => [\n${fakeTokens}])`;
+  return `[\n${fakeTokens}]`;
 }
 
 /*

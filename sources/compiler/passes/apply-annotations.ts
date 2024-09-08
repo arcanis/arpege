@@ -3,6 +3,10 @@ import * as asts        from '../asts';
 import {visitor}        from '../visitor';
 import {CompileOptions} from '..';
 
+const BUILTIN_ANNOTATIONS = new Set([
+  `if`,
+]);
+
 export function applyAnnotations(ast: asts.Ast, options: CompileOptions) {
   visitor.run(ast, {
     visit: (visit, node) => {
@@ -14,6 +18,9 @@ export function applyAnnotations(ast: asts.Ast, options: CompileOptions) {
       let res: asts.Node = node;
       for (let t = annotations.length - 1; t >= 0; --t) {
         const {name, parameters} = annotations[t];
+        if (BUILTIN_ANNOTATIONS.has(name))
+          continue;
+
         if (!Object.prototype.hasOwnProperty.call(options.annotations, name)) {
           throw new GrammarError(
             `Annotation "${name}" isn't registered in the current compilation context.`,

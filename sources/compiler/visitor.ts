@@ -90,6 +90,7 @@ const getDefaultVisitorFunctions = (opts: {
   literal: opts.createLeafVisitor<asts.Literal>(),
   class: opts.createLeafVisitor<asts.Class>(),
   any: opts.createLeafVisitor<asts.Any>(),
+  end: opts.createLeafVisitor<asts.End>(),
 });
 
 const defaultFunctions = {

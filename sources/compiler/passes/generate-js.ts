@@ -352,6 +352,10 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
             compileCondition(`input.length > peg$currPos`, 0);
           } break;
 
+          case op.MATCH_END: {        // MATCH_END
+            compileCondition(`peg$currPos === input.length`, 0);
+          } break;
+
           case op.MATCH_STRING: {     // MATCH_STRING s, a, f, ...
             const evaluatedData = saferEval(ast.consts![bc[ip + 1]]);
 
@@ -375,16 +379,15 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
           } break;
 
           case op.ACCEPT_N: {         // ACCEPT_N n
-            const firstPart = bc[ip + 1] > 1
-              ? `input.substr(peg$currPos, ${bc[ip + 1]})`
-              : `input.charAt(peg$currPos)`;
-
-            const secondPart = bc[ip + 1] > 1
-              ? `peg$currPos += ${bc[ip + 1]};`
-              : `peg$currPos++;`;
-
-            parts.push(stack.push(firstPart));
-            parts.push(secondPart);
+            if (bc[ip + 1] === 0) {
+              parts.push(stack.push(`""`));
+            } else if (bc[ip + 1] === 1) {
+              parts.push(stack.push(`input.charAt(peg$currPos)`));
+              parts.push(`peg$currPos++;`);
+            } else {
+              parts.push(stack.push(`input.substr(peg$currPos, ${bc[ip + 1]})`));
+              parts.push(`peg$currPos += ${bc[ip + 1]};`);
+            }
 
             ip += 2;
           } break;
@@ -970,21 +973,33 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
   }
 
   function generateWrapper(toplevelCode: string) {
-    function generateParserObject() {
+    function getParserExports() {
       return options.trace
-        ? [
-          `{`,
-          `  SyntaxError:   peg$SyntaxError,`,
-          `  DefaultTracer: peg$DefaultTracer,`,
-          `  parse:         peg$parse`,
-          `}`,
-        ].join(`\n`)
-        : [
-          `{`,
-          `  SyntaxError: peg$SyntaxError,`,
-          `  parse:       peg$parse`,
-          `}`,
-        ].join(`\n`);
+        ? [{
+          name: `SyntaxError`,
+          value: `peg$SyntaxError`,
+        }, {
+          name: `DefaultTracer`,
+          value: `peg$DefaultTracer`,
+        }, {
+          name: `parse`,
+          value: `peg$parse`,
+        }]
+        : [{
+          name: `SyntaxError`,
+          value: `peg$SyntaxError`,
+        }, {
+          name: `parse`,
+          value: `peg$parse`,
+        }];
+    }
+
+    function generateParserObject() {
+      return `{${getParserExports().map(({name, value}) => ` ${name}: ${value},\n`).join(``)}}`;
+    }
+
+    function generateParserExports() {
+      return getParserExports().map(({name, value}) => `export const ${name} = ${value};\n`).join(``);
     }
 
     var generators = {
@@ -1013,7 +1028,7 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
       },
 
       commonjs() {
-        var parts          = [],
+        var parts        = [],
           dependencyVars = Object.keys(options.dependencies),
           requires       = dependencyVars.map(
             variable => {
@@ -1046,92 +1061,31 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
         return parts.join(`\n`);
       },
 
-      amd() {
-        var dependencyIds  = Object.values(options.dependencies),
+      esm() {
+        var parts        = [],
           dependencyVars = Object.keys(options.dependencies),
-          dependencies   = `[${
-            dependencyIds.map(
-              id => {
-                return `"${js.stringEscape(id)}"`;
-              },
-            ).join(`, `)
-          }]`,
-          params         = dependencyVars.join(`, `);
-
-        return [
-          `/* eslint-disable */`,
-          ``,
-          `define(${dependencies}, function(${params}) {`,
-          `  "use strict";`,
-          ``,
-          indent2(toplevelCode),
-          ``,
-          indent2(`return ${generateParserObject()};`),
-          `});`,
-          ``,
-        ].join(`\n`);
-      },
-
-      globals() {
-        return [
-          `/* eslint-disable */`,
-          ``,
-          `(function(root) {`,
-          `  "use strict";`,
-          ``,
-          indent2(toplevelCode),
-          ``,
-          indent2(`root.${options.exportVar} = ${generateParserObject()};`),
-          `})(this);`,
-          ``,
-        ].join(`\n`);
-      },
-
-      umd() {
-        var parts          = [],
-          dependencyIds  = Object.values(options.dependencies),
-          dependencyVars = Object.keys(options.dependencies),
-          dependencies   = `[${
-            dependencyIds.map(
-              id => {
-                return `"${js.stringEscape(id)}"`;
-              },
-            ).join(`, `)
-          }]`,
-          requires       = dependencyIds.map(
-            id => {
-              return `require("${js.stringEscape(id)}")`;
+          requires       = dependencyVars.map(
+            variable => {
+              return `${variable} = require("${
+                js.stringEscape(options.dependencies[variable])
+              }")`;
             },
-          ).join(`, `),
-          params         = dependencyVars.join(`, `);
+          );
 
         parts.push([
           `/* eslint-disable */`,
           ``,
-          `(function(root, factory) {`,
-          `  if (typeof define === "function" && define.amd) {`,
-          `    define(${dependencies}, factory);`,
-          `  } else if (typeof module === "object" && module.exports) {`,
-          `    module.exports = factory(${requires});`,
         ].join(`\n`));
 
-        if (options.exportVar !== null) {
-          parts.push([
-            `  } else {`,
-            `    root.${options.exportVar} = factory();`,
-          ].join(`\n`));
+        if (requires.length > 0) {
+          parts.push(`var ${requires.join(`, `)};`);
+          parts.push(``);
         }
 
         parts.push([
-          `  }`,
-          `})(this, function(${params}) {`,
-          `  "use strict";`,
+          toplevelCode,
           ``,
-          indent2(toplevelCode),
-          ``,
-          indent2(`return ${generateParserObject()};`),
-          `});`,
-          ``,
+          generateParserExports(),
         ].join(`\n`));
 
         return parts.join(`\n`);

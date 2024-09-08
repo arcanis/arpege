@@ -9,10 +9,12 @@ import {CompileOptions}                       from './compiler';
 import {generate}                             from './index';
 
 abstract class BasePegCommand extends Command {
+  parameters = Option.Array(`--parameter`, []);
   tokenizer = Option.Boolean(`--tokenizer`, false);
 
   getParserOptions(): Partial<CompileOptions> {
     return {
+      parameters: new Set(this.parameters),
       tokenizer: this.tokenizer,
     };
   }
@@ -40,7 +42,7 @@ runExit({
 }, [
   class GeneratePegCommand extends BasePegCommand {
     format = Option.String(`--format`, `commonjs`, {
-      validator: t.isEnum([`amd`, `bare`, `commonjs`, `globals`, `umd`] as const),
+      validator: t.isEnum([`bare`, `commonjs`, `esm`] as const),
     });
 
     output = Option.String(`-o,--output`, {
@@ -55,24 +57,35 @@ runExit({
     async execute() {
       const source = await fs.promises.readFile(this.file, `utf8`);
 
-      const output = this.output === true
-        ? this.file.replace(/\.peg(js)?$/, `.cjs`)
-        : this.output;
+      const ext = ({
+        bare: `.js`,
+        commonjs: `.cjs`,
+        esm: `.mjs`,
+        typescript: `.mjs`,
+      } satisfies Record<CompileOptions[`format`], string>)[this.format];
+
+      const output = this.output
+        ? this.output === true
+          ? `${this.file.replace(/\.peg(js)?$/, ``)}${ext}`
+          : this.output
+        : null;
 
       if (this.types) {
         const code = generate(source, {...this.getParserOptions(), output: `types`, format: this.format});
 
         if (output) {
-          const typesName = this.parser
-            ? `${output.replace(/\.c?js$/, ``)}.types.ts`
-            : output;
+          const basePath = output.slice(0, -ext.length);
+          const typesName = `${basePath}.types.ts`;
 
-          await fs.promises.writeFile(typesName, await prettier.format(code, {parser: `typescript`}));
+          await fs.promises.writeFile(
+            typesName,
+            await prettier.format(code, {parser: `typescript`}),
+          );
 
-          if (this.parser) {
-            const baseName = output.replace(/\.c?js$/, ``);
-            await fs.promises.writeFile(`${baseName}.d.ts`, `export * from './${path.basename(baseName)}.types';\n`);
-          }
+          await fs.promises.writeFile(
+            `${basePath}.d.ts`.replace(/\.js\.d\.ts$/, `.d.ts`),
+            `export * from './${path.basename(typesName)}';\n`,
+          );
         } else {
           this.context.stdout.write(code);
           return;

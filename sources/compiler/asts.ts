@@ -54,6 +54,10 @@ export type Class = NodeBase & {
   ignoreCase: boolean;
 };
 
+export type End = NodeBase & {
+  type: `end`;
+};
+
 export type Group = NodeBase & {
   type: `group`;
   expression: Expression;
@@ -165,6 +169,7 @@ export type Expression =
   | Any
   | Choice
   | Class
+  | End
   | Group
   | Labeled
   | Literal

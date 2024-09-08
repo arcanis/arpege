@@ -285,105 +285,117 @@ const peg$type$action40 = (
   };
 };
 const peg$type$action41 = (
+  head: ast.IdentifierStart | "$",
+  tail: Array<ast.IdentifierPart>,
+) => {
+  return head + tail.join(``);
+};
+const peg$type$action42 = (
   head: ast.IdentifierStart,
   tail: Array<ast.IdentifierPart>,
 ) => {
   return head + tail.join(``);
 };
-const peg$type$action42 = (sequence: ast.UnicodeEscapeSequence) => {
+const peg$type$action43 = (sequence: ast.UnicodeEscapeSequence) => {
   return sequence;
 };
-const peg$type$action43 = (name: ast.Identifier) => {
+const peg$type$action44 = (conditions: Array<ast.Identifier>) => {
+  return {
+    name: `if`,
+    conditions,
+  };
+};
+const peg$type$action45 = (name: ast.Identifier) => {
   return name;
 };
-const peg$type$action44 = (name: ast.Identifier) => {
+const peg$type$action46 = (name: ast.Identifier) => {
   return name;
 };
-const peg$type$action45 = (parameters: ast.AnnotationParameters | null) => {
+const peg$type$action47 = (parameters: ast.AnnotationParameters | null) => {
   return parameters;
 };
-const peg$type$action46 = (parameters: ast.AnnotationParameters | null) => {
+const peg$type$action48 = (parameters: ast.AnnotationParameters | null) => {
   return parameters;
 };
-const peg$type$action47 = (
-  name: ReturnType<typeof peg$type$action43>,
-  parameters: ReturnType<typeof peg$type$action45> | null,
+const peg$type$action49 = (
+  name: ReturnType<typeof peg$type$action45>,
+  parameters: ReturnType<typeof peg$type$action47> | null,
 ) => {
   return {
     name,
     parameters: parameters ?? {},
   };
 };
-const peg$type$action48 = (value: ast.AnnotationParameter) => {
+const peg$type$action50 = (value: ast.AnnotationParameter) => {
   return value;
-};
-const peg$type$action49 = (value: ast.AnnotationParameter) => {
-  return value;
-};
-const peg$type$action50 = (
-  head: ast.AnnotationParameter,
-  tail: Array<ReturnType<typeof peg$type$action48>>,
-) => {
-  return [head, ...tail];
 };
 const peg$type$action51 = (value: ast.AnnotationParameter) => {
   return value;
 };
-const peg$type$action52 = (value: ast.AnnotationParameter) => {
-  return value;
-};
-const peg$type$action53 = (
+const peg$type$action52 = (
   head: ast.AnnotationParameter,
-  tail: Array<ReturnType<typeof peg$type$action51>>,
+  tail: Array<ReturnType<typeof peg$type$action50>>,
 ) => {
   return [head, ...tail];
 };
-const peg$type$action54 = (
-  value: ReturnType<typeof peg$type$action50> | null,
+const peg$type$action53 = (value: ast.AnnotationParameter) => {
+  return value;
+};
+const peg$type$action54 = (value: ast.AnnotationParameter) => {
+  return value;
+};
+const peg$type$action55 = (
+  head: ast.AnnotationParameter,
+  tail: Array<ReturnType<typeof peg$type$action53>>,
+) => {
+  return [head, ...tail];
+};
+const peg$type$action56 = (
+  value: ReturnType<typeof peg$type$action52> | null,
 ) => {
   return value ?? [];
 };
-const peg$type$action55 = (value: ast.AnnotationParameter) => {
+const peg$type$action57 = (value: ast.AnnotationParameter) => {
   return value;
-};
-const peg$type$action56 = (value: ast.AnnotationParameter) => {
-  return value;
-};
-const peg$type$action57 = (
-  head: ast.AnnotationParameter,
-  tail: Array<ReturnType<typeof peg$type$action55>>,
-) => {
-  return [head, ...tail];
 };
 const peg$type$action58 = (value: ast.AnnotationParameter) => {
   return value;
 };
-const peg$type$action59 = (value: ast.AnnotationParameter) => {
-  return value;
-};
-const peg$type$action60 = (
+const peg$type$action59 = (
   head: ast.AnnotationParameter,
-  tail: Array<ReturnType<typeof peg$type$action58>>,
+  tail: Array<ReturnType<typeof peg$type$action57>>,
 ) => {
   return [head, ...tail];
 };
-const peg$type$action61 = (
-  value: ReturnType<typeof peg$type$action57> | null,
+const peg$type$action60 = (value: ast.AnnotationParameter) => {
+  return value;
+};
+const peg$type$action61 = (value: ast.AnnotationParameter) => {
+  return value;
+};
+const peg$type$action62 = (
+  head: ast.AnnotationParameter,
+  tail: Array<ReturnType<typeof peg$type$action60>>,
+) => {
+  return [head, ...tail];
+};
+const peg$type$action63 = (
+  value: ReturnType<typeof peg$type$action59> | null,
 ) => {
   return value ?? [];
 };
-const peg$type$action62 = (
-  parameterList: ReturnType<typeof peg$type$action54>,
+const peg$type$action64 = (
+  parameterList: ReturnType<typeof peg$type$action56>,
 ) => {
   return Object.fromEntries(parameterList);
 };
-const peg$type$action63 = (name: ast.Identifier, expression: unknown) => {
+const peg$type$action65 = (name: ast.Identifier, expression: unknown) => {
   return tuple([name, expression]);
 };
-const peg$type$action64 = (name: ast.Identifier, value: ast.ValueLiteral) => {
+const peg$type$action66 = (name: ast.Identifier, value: ast.ValueLiteral) => {
   return tuple([name, value]);
 };
-const peg$type$action65 = (
+const peg$type$action67 = (
   value: ast.StringLiteral,
   ignoreCase: "i" | null,
 ) => {
@@ -394,58 +406,52 @@ const peg$type$action65 = (
     value,
   };
 };
-const peg$type$action66 = () => {
+const peg$type$action68 = () => {
   return JSON.parse(text());
 };
-const peg$type$action67 = () => {
+const peg$type$action69 = () => {
   return null;
 };
-const peg$type$action68 = (values: ast.ArrayValues | null) => {
+const peg$type$action70 = (values: ast.ArrayValues | null) => {
   return values ?? [];
 };
-const peg$type$action69 = (value: ast.ValueLiteral) => {
+const peg$type$action71 = (value: ast.ValueLiteral) => {
   return value;
-};
-const peg$type$action70 = (value: ast.ValueLiteral) => {
-  return value;
-};
-const peg$type$action71 = (
-  head: ast.ValueLiteral,
-  tail: Array<ReturnType<typeof peg$type$action69>>,
-) => {
-  return [head, ...tail];
 };
 const peg$type$action72 = (value: ast.ValueLiteral) => {
   return value;
 };
-const peg$type$action73 = (value: ast.ValueLiteral) => {
-  return value;
-};
-const peg$type$action74 = (
+const peg$type$action73 = (
   head: ast.ValueLiteral,
-  tail: Array<ReturnType<typeof peg$type$action72>>,
+  tail: Array<ReturnType<typeof peg$type$action71>>,
 ) => {
   return [head, ...tail];
 };
-const peg$type$action75 = (
-  value: ReturnType<typeof peg$type$action71> | null,
+const peg$type$action74 = (value: ast.ValueLiteral) => {
+  return value;
+};
+const peg$type$action75 = (value: ast.ValueLiteral) => {
+  return value;
+};
+const peg$type$action76 = (
+  head: ast.ValueLiteral,
+  tail: Array<ReturnType<typeof peg$type$action74>>,
+) => {
+  return [head, ...tail];
+};
+const peg$type$action77 = (
+  value: ReturnType<typeof peg$type$action73> | null,
 ) => {
   return value ?? [];
 };
-const peg$type$action76 = (chars: Array<ast.BacktickStringCharacter>) => {
+const peg$type$action78 = (chars: Array<ast.BacktickStringCharacter>) => {
   return chars.join(``);
 };
-const peg$type$action77 = (chars: Array<ast.DoubleStringCharacter>) => {
+const peg$type$action79 = (chars: Array<ast.DoubleStringCharacter>) => {
   return chars.join(``);
 };
-const peg$type$action78 = (chars: Array<ast.SingleStringCharacter>) => {
+const peg$type$action80 = (chars: Array<ast.SingleStringCharacter>) => {
   return chars.join(``);
-};
-const peg$type$action79 = () => {
-  return text();
-};
-const peg$type$action80 = (sequence: ast.EscapeSequence) => {
-  return sequence;
 };
 const peg$type$action81 = () => {
   return text();
@@ -459,7 +465,13 @@ const peg$type$action83 = () => {
 const peg$type$action84 = (sequence: ast.EscapeSequence) => {
   return sequence;
 };
-const peg$type$action85 = (
+const peg$type$action85 = () => {
+  return text();
+};
+const peg$type$action86 = (sequence: ast.EscapeSequence) => {
+  return sequence;
+};
+const peg$type$action87 = (
   inverted: "^" | null,
   parts: Array<ast.ClassCharacterRange | ast.ClassCharacter>,
   ignoreCase: "i" | null,
@@ -472,7 +484,7 @@ const peg$type$action85 = (
     ignoreCase: ignoreCase !== null,
   };
 };
-const peg$type$action86 = (
+const peg$type$action88 = (
   begin: ast.ClassCharacter,
   end: ast.ClassCharacter,
 ) => {
@@ -481,53 +493,62 @@ const peg$type$action86 = (
 
   return tuple([begin, end]);
 };
-const peg$type$action87 = () => {
+const peg$type$action89 = () => {
   return text();
 };
-const peg$type$action88 = (sequence: ast.EscapeSequence) => {
+const peg$type$action90 = (sequence: ast.EscapeSequence) => {
   return sequence;
 };
-const peg$type$action89 = () => {
+const peg$type$action91 = () => {
   return ``;
 };
-const peg$type$action90 = () => {
+const peg$type$action92 = () => {
   return `\0`;
 };
-const peg$type$action91 = () => {
+const peg$type$action93 = () => {
   return `\b`;
 };
-const peg$type$action92 = () => {
+const peg$type$action94 = () => {
   return `\f`;
 };
-const peg$type$action93 = () => {
+const peg$type$action95 = () => {
   return `\n`;
 };
-const peg$type$action94 = () => {
+const peg$type$action96 = () => {
   return `\r`;
 };
-const peg$type$action95 = () => {
+const peg$type$action97 = () => {
   return `\t`;
 };
-const peg$type$action96 = () => {
+const peg$type$action98 = () => {
   return `\x0B`;
 };
-const peg$type$action97 = () => {
+const peg$type$action99 = () => {
   return text();
 };
-const peg$type$action98 = (digits: string) => {
+const peg$type$action100 = (digits: string) => {
   return String.fromCharCode(parseInt(digits, 16));
 };
-const peg$type$action99 = (digits: string) => {
+const peg$type$action101 = (digits: string) => {
   return String.fromCharCode(parseInt(digits, 16));
 };
-const peg$type$action100 = () => {
+const peg$type$action102 = () => {
   return {
     type: `any` as const,
     location: location(),
   };
 };
-const peg$type$action101 = (code: ast.Code) => {
+const peg$type$action103 = () => {
+  return {
+    type: `end` as const,
+    location: location(),
+  };
+};
+const peg$type$action104 = (code: ast.CodeBraces) => {
   return code;
+};
+const peg$type$action105 = (code: ast.CodeParen) => {
+  return `{ return (${code}) }`;
 };
 
 namespace ast {
@@ -558,6 +579,7 @@ namespace ast {
     | ast.LiteralMatcher
     | ast.CharacterClassMatcher
     | ast.AnyMatcher
+    | ast.EndMatcher
     | ast.RuleReferenceExpression
     | ast.SemanticPredicateExpression
     | never;
@@ -598,17 +620,19 @@ namespace ast {
     Array<[undefined, ast.SourceCharacter]>,
   ];
   export type Identifier = ast.IdentifierName;
-  export type IdentifierName = ReturnType<typeof peg$type$action41>;
+  export type IdentifierName =
+    | ReturnType<typeof peg$type$action41>
+    | ReturnType<typeof peg$type$action42>;
   export type IdentifierStart =
     | ast.UnicodeLetter
-    | "$"
     | "_"
-    | ReturnType<typeof peg$type$action42>;
+    | ReturnType<typeof peg$type$action43>;
   export type IdentifierPart =
     | ast.IdentifierStart
     | ast.UnicodeCombiningMark
     | ast.UnicodeDigit
     | ast.UnicodeConnectorPunctuation
+    | "$"
     | "\u200c"
     | "\u200d";
   export type UnicodeLetter =
@@ -663,45 +687,47 @@ namespace ast {
     | ast.SuperToken;
   export type NullLiteral = ast.NullToken;
   export type BooleanLiteral = ast.TrueToken | ast.FalseToken;
-  export type Annotation = ReturnType<typeof peg$type$action47>;
-  export type AnnotationParameters = ReturnType<typeof peg$type$action62>;
+  export type Annotation = ast.IfAnnotation | ast.GenericAnnotation;
+  export type IfAnnotation = ReturnType<typeof peg$type$action44>;
+  export type GenericAnnotation = ReturnType<typeof peg$type$action49>;
+  export type AnnotationParameters = ReturnType<typeof peg$type$action64>;
   export type AnnotationParameter =
-    | ReturnType<typeof peg$type$action63>
-    | ReturnType<typeof peg$type$action64>;
-  export type LiteralMatcher = ReturnType<typeof peg$type$action65>;
+    | ReturnType<typeof peg$type$action65>
+    | ReturnType<typeof peg$type$action66>;
+  export type LiteralMatcher = ReturnType<typeof peg$type$action67>;
   export type ValueLiteral =
     | ast.StringLiteral
     | unknown
-    | ReturnType<typeof peg$type$action66>
-    | ReturnType<typeof peg$type$action67>;
-  export type ArrayLiteral = ReturnType<typeof peg$type$action68>;
-  export type ArrayValues = ReturnType<typeof peg$type$action75>;
+    | ReturnType<typeof peg$type$action68>
+    | ReturnType<typeof peg$type$action69>;
+  export type ArrayLiteral = ReturnType<typeof peg$type$action70>;
+  export type ArrayValues = ReturnType<typeof peg$type$action77>;
   export type StringLiteral =
-    | ReturnType<typeof peg$type$action76>
-    | ReturnType<typeof peg$type$action77>
-    | ReturnType<typeof peg$type$action78>;
-  export type BacktickStringCharacter =
+    | ReturnType<typeof peg$type$action78>
     | ReturnType<typeof peg$type$action79>
-    | ReturnType<typeof peg$type$action80>
-    | ast.LineContinuation;
-  export type DoubleStringCharacter =
+    | ReturnType<typeof peg$type$action80>;
+  export type BacktickStringCharacter =
     | ReturnType<typeof peg$type$action81>
     | ReturnType<typeof peg$type$action82>
     | ast.LineContinuation;
-  export type SingleStringCharacter =
+  export type DoubleStringCharacter =
     | ReturnType<typeof peg$type$action83>
     | ReturnType<typeof peg$type$action84>
     | ast.LineContinuation;
-  export type CharacterClassMatcher = ReturnType<typeof peg$type$action85>;
-  export type ClassCharacterRange = ReturnType<typeof peg$type$action86>;
-  export type ClassCharacter =
-    | ReturnType<typeof peg$type$action87>
-    | ReturnType<typeof peg$type$action88>
+  export type SingleStringCharacter =
+    | ReturnType<typeof peg$type$action85>
+    | ReturnType<typeof peg$type$action86>
     | ast.LineContinuation;
-  export type LineContinuation = ReturnType<typeof peg$type$action89>;
+  export type CharacterClassMatcher = ReturnType<typeof peg$type$action87>;
+  export type ClassCharacterRange = ReturnType<typeof peg$type$action88>;
+  export type ClassCharacter =
+    | ReturnType<typeof peg$type$action89>
+    | ReturnType<typeof peg$type$action90>
+    | ast.LineContinuation;
+  export type LineContinuation = ReturnType<typeof peg$type$action91>;
   export type EscapeSequence =
     | ast.CharacterEscapeSequence
-    | ReturnType<typeof peg$type$action90>
+    | ReturnType<typeof peg$type$action92>
     | ast.HexEscapeSequence
     | ast.UnicodeEscapeSequence;
   export type CharacterEscapeSequence =
@@ -709,25 +735,29 @@ namespace ast {
     | ast.NonEscapeCharacter;
   export type SingleEscapeCharacter =
     | string
-    | ReturnType<typeof peg$type$action91>
-    | ReturnType<typeof peg$type$action92>
     | ReturnType<typeof peg$type$action93>
     | ReturnType<typeof peg$type$action94>
     | ReturnType<typeof peg$type$action95>
-    | ReturnType<typeof peg$type$action96>;
-  export type NonEscapeCharacter = ReturnType<typeof peg$type$action97>;
+    | ReturnType<typeof peg$type$action96>
+    | ReturnType<typeof peg$type$action97>
+    | ReturnType<typeof peg$type$action98>;
+  export type NonEscapeCharacter = ReturnType<typeof peg$type$action99>;
   export type EscapeCharacter =
     | ast.SingleEscapeCharacter
     | ast.DecimalDigit
     | "x"
     | "u";
-  export type HexEscapeSequence = ReturnType<typeof peg$type$action98>;
-  export type UnicodeEscapeSequence = ReturnType<typeof peg$type$action99>;
+  export type HexEscapeSequence = ReturnType<typeof peg$type$action100>;
+  export type UnicodeEscapeSequence = ReturnType<typeof peg$type$action101>;
   export type DecimalDigit = string;
   export type HexDigit = string;
-  export type AnyMatcher = ReturnType<typeof peg$type$action100>;
-  export type CodeBlock = ReturnType<typeof peg$type$action101>;
-  export type Code = string;
+  export type AnyMatcher = ReturnType<typeof peg$type$action102>;
+  export type EndMatcher = ReturnType<typeof peg$type$action103>;
+  export type CodeBlock =
+    | ReturnType<typeof peg$type$action104>
+    | ReturnType<typeof peg$type$action105>;
+  export type CodeBraces = string;
+  export type CodeParen = string;
   export type Ll = string;
   export type Lm = string;
   export type Lo = string;
@@ -829,6 +859,8 @@ declare type ParseResults = {
   NullLiteral: ast.NullLiteral;
   BooleanLiteral: ast.BooleanLiteral;
   Annotation: ast.Annotation;
+  IfAnnotation: ast.IfAnnotation;
+  GenericAnnotation: ast.GenericAnnotation;
   AnnotationParameters: ast.AnnotationParameters;
   AnnotationParameter: ast.AnnotationParameter;
   LiteralMatcher: ast.LiteralMatcher;
@@ -853,8 +885,10 @@ declare type ParseResults = {
   DecimalDigit: ast.DecimalDigit;
   HexDigit: ast.HexDigit;
   AnyMatcher: ast.AnyMatcher;
+  EndMatcher: ast.EndMatcher;
   CodeBlock: ast.CodeBlock;
-  Code: ast.Code;
+  CodeBraces: ast.CodeBraces;
+  CodeParen: ast.CodeParen;
   Ll: ast.Ll;
   Lm: ast.Lm;
   Lo: ast.Lo;

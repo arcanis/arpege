@@ -184,6 +184,7 @@ PrimaryExpression
   = LiteralMatcher
   / CharacterClassMatcher
   / AnyMatcher
+  / EndMatcher
   / RuleReferenceExpression
   / SemanticPredicateExpression
   / (@type(type: `never`)
@@ -264,11 +265,11 @@ Identifier
   = !ReservedWord ::IdentifierName
 
 IdentifierName `identifier`
-  = head:IdentifierStart tail:IdentifierPart* { return head + tail.join(``); }
+  = head:(IdentifierStart / `$`) tail:IdentifierPart+ { return head + tail.join(``); }
+  / head:IdentifierStart tail:IdentifierPart* { return head + tail.join(``); }
 
 IdentifierStart
   = UnicodeLetter
-  / `$`
   / `_`
   / `\\` sequence:UnicodeEscapeSequence { return sequence; }
 
@@ -277,6 +278,7 @@ IdentifierPart
   / UnicodeCombiningMark
   / UnicodeDigit
   / UnicodeConnectorPunctuation
+  / `$`
   / `\u200C`
   / `\u200D`
 
@@ -349,6 +351,18 @@ BooleanLiteral
   / FalseToken
 
 Annotation
+  = IfAnnotation
+  / GenericAnnotation
+
+IfAnnotation
+  = conditions:(@token(type: `decorator`) `@if(` __ ::(@separator(expr: __ `,` __) ::Identifier*) __ `)`) {
+      return {
+        name: `if`,
+        conditions,
+      };
+    }
+
+GenericAnnotation
   = name:(@token(type: `decorator`) `@` name:Identifier `(` { return name })
     parameters:(__ parameters:AnnotationParameters? __ { return parameters })?
     (@token(type: `decorator`) `)`) {
@@ -501,12 +515,25 @@ AnyMatcher
       };
     }
 
-CodeBlock
-  = `{` code:Code `}` { return code }
+EndMatcher
+  = @token(type: `regexp`) `$` {
+      return {
+        type: `end` as const,
+        location: location(),
+      };
+    }
 
-Code
+CodeBlock
+  = `{` code:CodeBraces `}` { return code }
+  / `=>` _ `(` code:CodeParen `)` { return `{ return (${code}) }` }
+
+CodeBraces
   = $((![{}] SourceCharacter)+
-  / `{` Code `}`)*
+  / `{` CodeBraces `}`)*
+
+CodeParen
+  = $((![{}] SourceCharacter)+
+  / `(` CodeParen `)`)*
 
 /*
  * Unicode Character Categories

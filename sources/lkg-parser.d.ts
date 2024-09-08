@@ -1,1 +1,1 @@
-export * from './lkg-parser.types';
+export * from './lkg-parser.types.ts';
