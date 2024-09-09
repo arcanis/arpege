@@ -1,6 +1,6 @@
 {
   "name": "arpege",
-  "version": "2.1.1",
+  "version": "3.0.0",
   "packageManager": "yarn@4.4.1",
   "description": "Parser generator for JavaScript",
   "keywords": [
@@ -13,8 +13,8 @@
   "author": "David Majda <david@majda.cz> (http://majda.cz/)",
   "main": "sources/index.ts",
   "bin": {
-    "peg": "sources/cli.ts",
-    "arpege": "sources/cli.ts"
+    "arpege": "sources/cli.ts",
+    "peg": "sources/cli.ts"
   },
   "workspaces": [
     "examples",
@@ -51,7 +51,7 @@
     "typescript": "^5.5.4"
   },
   "scripts": {
-    "lkg": "yarn peg ./examples/grammar.pegjs.pegjs --output=./sources/lkg-parser.mjs --format esm --types",
+    "lkg": "yarn peg ./examples/grammar.pegjs.pegjs --output=./sources/lkg-parser.js --format commonjs --with-types",
     "prepack": "rm -rf lib && yarn rollup && yarn peg ./examples/grammar.pegjs.pegjs --output=./lib/grammar.pegjs.js",
     "postpack": "rm -rf lib",
     "peg": "yarn ts-node -T sources/cli.ts",

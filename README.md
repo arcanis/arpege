@@ -26,8 +26,17 @@ Arpege is distributed with a CLI that makes it easier to interact with your pars
 # Generates the parser on the standard output
 yarn peg path/to/grammar.pegjs
 
-# Generates path/to/grammar.cjs
+# Generates path/to/grammar.parser.mjs
 yarn peg path/to/grammar.pegjs -o
+
+# Generates the parser with a custom path, and its TypeScript definition files
+yarn peg path/to/grammar.pegjs -o path/to/grammar.js --with-types
+
+# Generates both path/to/grammar.parser.mjs and path/to/grammar.tokenizer.mjs
+yarn peg path/to/grammar.pegjs --mode parser --mode tokenizer
+
+# Generates the parser and tokenizer, and also the TypeScript definition files
+yarn peg path/to/grammar.pegjs --mode parser --mode tokenizer --with-types
 
 # Prints the result of the parser called on the given file
 yarn peg path/to/grammar.pegjs --input-file ./my-file.txt
@@ -49,6 +58,38 @@ SuperSyntax is a [VSCode extension](https://marketplace.visualstudio.com/items?i
 ```
 
 Then create a new `my-file.math.stx` file and add a mathematical expression. It'll be automatically colored as per the rules defined in the [grammar](/examples/grammar.css.pegjs)! Note that SuperSyntax also automatically adds support for PegJS syntax highlighting.
+
+### Syntactic improvements
+
+#### Backtick strings
+
+Backtick strings are now supported in addition to single and double quotes to bring the language closer to JavaScript; interpolation is not permitted, since the PegJS grammar doesn't have equivalents for variables:
+
+```pegjs
+keyword = "if" / "then" / "else" / "endif"
+keyword = 'if' / 'then' / 'else' / 'endif'
+keyword = `if` / `then` / `else` / `endif`
+```
+
+#### Fat arrow returns
+
+Actions can now be written using the fat arrow syntax (`=>`) instead of the curly braces; the return value must be wrapped in parentheses:
+
+```pegjs
+identifier = name:$[a-zA-Z]+ => (name.toUpperCase())
+```
+
+#### Leading `/` in alternatives
+
+Alternatives are now allowed to be prefixed with a `/`:
+
+```pegjs
+keyword =
+  / break
+  / case
+  / catch
+  / continue
+```
 
 ### Automatic return values
 
@@ -77,13 +118,25 @@ identifier = !reservedWord ::identifierString
 
 If any of those three variant is detected, all other elements in the parsing sequence will see their results discarded.
 
-### New `@separator` annotation
+### Annotations
+
+#### `@if`
+
+The `@if` annotation lets you conditionally include a parsing sequence. For example, the following rule that parses hexadecimal numbers will recover from end-of-file parsing errors if the `tokenizer` variable is set:
+
+```pegjs
+hex_number
+  = @if(tokenizer) "0x" $
+  / "0x" digits:[0-9a-fA-F]+
+```
+
+#### `@separator`
 
 The `+` and `*` operators now accept a `@separator` annotation that lets you specify an expression to inject between each elements of the repetition:
 
 ```pegjs
 identifiers =
-  @separator(expr: "," S)
+  @separator(S "," S)
   identifier+
 ```
 
@@ -101,12 +154,22 @@ The tokenizer tries to be smart and automatically detect the places where tokens
 - String literals are turned into one token each (`"eval" "("` generates two tokens, `"eval("` a single one)
 - Character classes generate one token **for each character**; use `$` to aggregate them into a single token
 
-You can assign custom token types or boundaries by using the `@token` annotation. For example, the following grammar will define a special `decorator` token that will cover both the `@` and the identifier that follows (without the need to use `$`):
+Tokens all have by default the general type `syntax`. You can assign custom token types by using the `@token` annotation. For example, the following grammar will define a special `decorator` token that will cover both the `@` and the identifier that follows (without the need to use `$`):
 
 ```pegjs
-Decorator =
-  @token(type: `decorator`)
-  `@` name:identifier
+@token("number")
+Number = [0-9]+
+```
+
+You may also define parent tokens that will be used to group tokens together. For example, this simplified grammar will define a `regex` token that also provide tokens for special characters:
+
+```pegjs
+@token("regex")
+Regex = "/" chars:RegexChar+ "/"
+
+RegexChar =
+  / @token("special") [(){}*?|.^$]
+  / @token("text") .
 ```
 
 ### Experimental TypeScript support
@@ -115,7 +178,7 @@ Decorator =
 > 
 > Support for this feature is **experimental**. Some bugs may exist, and some APIs may change in the future.
 
-Arpege supports generating `.d.ts` files for your parsers by adding the `--types` flag to the command line. Unlike [`ts-pegjs`](https://github.com/metadevpro/ts-pegjs) which simply makes the `parser` function return `any`, Arpege attempts to return types that match what the actual parser would return, by using some introspection mechanisms.
+Arpege supports generating `.d.ts` files for your parsers by adding the `--with-types` flag to the command line. Unlike [`ts-pegjs`](https://github.com/metadevpro/ts-pegjs) which simply makes the `parser` function return `any`, Arpege attempts to return types that match what the actual parser would return, by using some introspection mechanisms.
 
 The generated parsers have also access to the following helpers which often prove useful in grammar actions:
 
@@ -127,7 +190,7 @@ Despite its best efforts, Arpege may generate invalid files if recursion is used
 
 ```pegjs
 Term = Number / "(" ::Term ")"
-Number = [0-9]+ { return parseInt(text(), 10) }
+Number = [0-9]+ => (parseInt(text(), 10))
 ```
 
 Arpege will generate the following output:
@@ -139,34 +202,12 @@ type NumberType = ReturnType<typeof peg$type$action0>;
 
 TypeScript doesn't support recursive types except in very specific cases, and will degrade `TermType` into `any`. To avoid this, you must use the `@type` annotation which lets you assign a manual type to a node. For example, to ignore the recursive branch, you can manually type it as `never`:
 
-```ts
-Term = Number / (@type(type: `never`) `(` ::Term `)`)
-Number = [0-9]+ { return parseInt(text(), 10) }
+```pegjs
+Term = Number / @type("never") "(" ::Term ")"
+Number = [0-9]+ => (parseInt(text(), 10))
 ```
 
 The `TermType` type will then become `NumberType | never`, which TypeScript will coalesce into simply `NumberType`. In more complicated cases, you may have to provide more concrete types or even fallback to `unknown` or `any`; check the [`grammar.css.pegjs`](/examples/grammar.css.pegjs) and [`grammar.pegjs.pegjs`](/examples/grammar.pegjs.pegjs) files in this repository for some examples.
-
-### Backtick strings
-
-Given that the grammar is already incompatible with PegJS, I decided to implement backtick strings, just like in JavaScript. Unlike JavaScript, interpolating values isn't currently allowed.
-
-```pegjs
-keyword = "if" / "then" / "else" / "endif"
-keyword = 'if' / 'then' / 'else' / 'endif'
-keyword = `if` / `then` / `else` / `endif`
-```
-
-### Leading `/` in alternatives
-
-Alternatives are now allowed to be prefixed with a `/`:
-
-```pegjs
-keyword =
-  / break
-  / case
-  / catch
-  / continue
-```
 
 ### Transactional parsing
 

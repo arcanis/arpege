@@ -1584,6 +1584,7 @@ __metadata:
     typanion: "npm:^3.14.0"
     typescript: "npm:^5.5.4"
   bin:
+    arpege: sources/cli.ts
     peg: sources/cli.ts
   languageName: unknown
   linkType: soft

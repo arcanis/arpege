@@ -44,53 +44,51 @@
 /* ---- Syntactic Grammar ----- */
 
 Grammar
-  = __ initializer:(::Initializer __)? rules:(::Rule __)+ {
-      return {
-        type: `grammar` as const,
-        location: location(),
-        initializer,
-        rules,
-      };
-    }
+  = __ initializer:(::Initializer __)? rules:(::Rule __)+ => ({
+      type: `grammar` as const,
+      location: location(),
+      initializer,
+      rules,
+    })
 
 Initializer
-  = code:CodeBlock EOS {
-      return {
-        type: `initializer` as const,
-        location: location(),
-        code: code,
-      };
-    }
+  = code:CodeBlock EOS => ({
+      type: `initializer` as const,
+      location: location(),
+      code: code,
+    })
 
 Rule
-  = name:(@token(type: `class`) IdentifierName)
+  = annotations:(@separator(__) Annotation*)
+    __ name:(@token(type: `class`) IdentifierName)
     __ displayName:(::StringLiteral __)? `=` __
     expression:Expression EOS {
+      const expressionWithAnnotations = annotations.length === 0 ? expression : {
+        ...expression,
+        annotations,
+      };
+
       return {
         type: `rule` as const,
         location: location(),
         name,
-        expression: displayName === null ? expression : {
+        expression: displayName === null ? expressionWithAnnotations : {
           type: `named` as const,
           location: location(),
           name: displayName,
-          expression,
+          expression: expressionWithAnnotations,
         },
       };
     }
 
 Expression
-  = annotations:(@separator(expr: __) Annotation*) __ expression:LeadingChoiceExpression {
-      return {...expression, annotations: annotations.length > 0 ? annotations : undefined};
-    }
+  = __ ::LeadingChoiceExpression
 
 LeadingChoiceExpression
-  = `/`? __ expression:ChoiceExpression {
-      return expression;
-    }
+  = `/`? __ ::ChoiceExpression
 
 ChoiceExpression
-  = alternatives:(@separator(expr: __ `/` __) ScopeExpression+) {
+  = __ alternatives:(@separator(__ `/` __) AnnotatedScopeExpression+) {
       return alternatives.length === 1 ? alternatives[0] : {
         type: `choice` as const,
         location: location(),
@@ -98,29 +96,34 @@ ChoiceExpression
       };
     }
 
-ScopeExpression
-  = expression:ActionExpression __ `^` __ code:CodeBlock {
-      return {
-        type: `scope` as const,
-        location: location(),
-        code,
-        expression,
+AnnotatedScopeExpression
+  = annotations:(@separator(__) Annotation*) __ expression:ScopeExpression {
+      return annotations.length === 0 ? expression : {
+        ...expression,
+        annotations,
       };
     }
+
+ScopeExpression
+  = expression:ActionExpression __ `^` __ code:CodeBlock => ({
+      type: `scope` as const,
+      location: location(),
+      code,
+      expression,
+    })
   / ActionExpression
 
 ActionExpression
-  = expression:SequenceExpression code:(__ ::CodeBlock)? {
-      return code === null ? expression : {
-        type: `action` as const,
-        location: location(),
-        code: code ?? ``,
-        expression,
-      };
-    }
+  = expression:SequenceExpression __ code:CodeBlock => ({
+      type: `action` as const,
+      location: location(),
+      code: code ?? ``,
+      expression,
+    })
+  / SequenceExpression
 
 SequenceExpression
-  = elements:(@separator(expr: __) LabeledExpression+) {
+  = elements:(@separator(__) LabeledExpression+) {
       return elements.length === 1 ? elements[0] : {
         type: `sequence` as const,
         location: location(),
@@ -130,32 +133,26 @@ SequenceExpression
 
 LabeledExpression
   = label:(@token(type: `variable`) Identifier)
-    __ `:` __ expression:PrefixedExpression {
-      return {
-        type: `labeled` as const,
-        location: location(),
-        label,
-        expression,
-      };
-    }
-  / `::` __ expression:PrefixedExpression {
-      return {
-        type: `labeled` as const,
-        location: location(),
-        label: null,
-        expression,
-      };
-    }
+    __ `:` __ expression:PrefixedExpression => ({
+      type: `labeled` as const,
+      location: location(),
+      label,
+      expression,
+    })
+  / `::` __ expression:PrefixedExpression => ({
+      type: `labeled` as const,
+      location: location(),
+      label: null,
+      expression,
+    })
   / PrefixedExpression
 
 PrefixedExpression
-  = operator:PrefixedOperator __ expression:SuffixedExpression {
-      return {
-        type: OPS_TO_PREFIXED_TYPES[operator],
-        location: location(),
-        expression,
-      };
-    }
+  = operator:PrefixedOperator __ expression:SuffixedExpression => ({
+      type: OPS_TO_PREFIXED_TYPES[operator],
+      location: location(),
+      expression,
+    })
   / SuffixedExpression
 
 PrefixedOperator
@@ -164,13 +161,11 @@ PrefixedOperator
   / `!`
 
 SuffixedExpression
-  = expression:PrimaryExpression __ operator:SuffixedOperator {
-      return {
-        type: OPS_TO_SUFFIXED_TYPES[operator],
-        location: location(),
-        expression,
-      };
-    }
+  = expression:PrimaryExpression __ operator:SuffixedOperator => ({
+      type: OPS_TO_SUFFIXED_TYPES[operator],
+      location: location(),
+      expression,
+    })
   / PrimaryExpression
 
 SuffixedOperator
@@ -187,8 +182,7 @@ PrimaryExpression
   / EndMatcher
   / RuleReferenceExpression
   / SemanticPredicateExpression
-  / (@type(type: `never`)
-    `(` __ expression:Expression __ `)` {
+  / @type(`never`) `(` __ expression:Expression __ `)` {
       /*
        * The purpose of the `group` AST node is just to isolate label scope. We
        * don`t need to put it around nodes that can`t contain any labels or
@@ -198,25 +192,21 @@ PrimaryExpression
       return expression.type === `labeled` || expression.type === `sequence`
           ? { type: `group` as const, expression: expression }
           : expression;
-    })
+    }
 
 RuleReferenceExpression
-  = name:(@token(type: `function`) IdentifierName) !(__ (StringLiteral __)? `=`) {
-      return {
-        type: `ruleRef` as const,
-        location: location(),
-        name,
-      };
-    }
+  = name:(@token(type: `function`) IdentifierName) !(__ (StringLiteral __)? `=` !`>`) => ({
+      type: `ruleRef` as const,
+      location: location(),
+      name,
+    })
 
 SemanticPredicateExpression
-  = operator:SemanticPredicateOperator __ code:CodeBlock {
-      return {
-        type: OPS_TO_SEMANTIC_PREDICATE_TYPES[operator],
-        location: location(),
-        code,
-      };
-    }
+  = operator:SemanticPredicateOperator __ code:CodeBlock => ({
+      type: OPS_TO_SEMANTIC_PREDICATE_TYPES[operator],
+      location: location(),
+      code,
+    })
 
 SemanticPredicateOperator
   = `&`
@@ -265,13 +255,13 @@ Identifier
   = !ReservedWord ::IdentifierName
 
 IdentifierName `identifier`
-  = head:(IdentifierStart / `$`) tail:IdentifierPart+ { return head + tail.join(``); }
-  / head:IdentifierStart tail:IdentifierPart* { return head + tail.join(``); }
+  = head:(IdentifierStart / `$`) tail:IdentifierPart+ => (head + tail.join(``))
+  / head:IdentifierStart tail:IdentifierPart* => (head + tail.join(``))
 
 IdentifierStart
   = UnicodeLetter
   / `_`
-  / `\\` sequence:UnicodeEscapeSequence { return sequence; }
+  / `\\` ::UnicodeEscapeSequence
 
 IdentifierPart
   = IdentifierStart
@@ -352,100 +342,99 @@ BooleanLiteral
 
 Annotation
   = IfAnnotation
-  / GenericAnnotation
+  / SeparatorAnnotation
+  / TokenAnnotation
+  / TypeAnnotation
 
+@token(type: `decorator`, children: true)
 IfAnnotation
-  = conditions:(@token(type: `decorator`) `@if(` __ ::(@separator(expr: __ `,` __) ::Identifier*) __ `)`) {
-      return {
-        name: `if`,
-        conditions,
-      };
-    }
+  = `@if(` __ conditions:(@separator(__ `,` __) ::Identifier*) __ `)` => ({
+      name: `if`,
+      parameters: {conditions},
+    })
 
-GenericAnnotation
-  = name:(@token(type: `decorator`) `@` name:Identifier `(` { return name })
-    parameters:(__ parameters:AnnotationParameters? __ { return parameters })?
-    (@token(type: `decorator`) `)`) {
-      return {
-        name,
-        parameters: parameters ?? {}
-      };
-    }
+@token(type: `decorator`, children: true)
+SeparatorAnnotation
+  = `@separator(` `expr:`? __ expr:(@type(`unknown`) Expression) __ `)` => ({
+      name: `separator`,
+      parameters: { expr },
+    })
+
+@token(type: `decorator`, children: true)
+TypeAnnotation
+  = `@type(` `type:`? __ type:StringLiteral __ `)` => ({
+      name: `type`,
+      parameters: { type },
+    })
+
+@token(type: `decorator`, children: true)
+TokenAnnotation
+  = `@token(` __ parameters:AnnotationParameters? __ `)` => ({
+      name: `token`,
+      parameters: parameters ?? {},
+    })
 
 AnnotationParameters
-  = parameterList:(@separator(expr: __ `,` __) AnnotationParameter*) {
+  = parameterList:(@separator(__ `,` __) AnnotationParameter*) {
       return Object.fromEntries(parameterList);
     }
 
 AnnotationParameter
-  = name:(@token(type: `parameter`) Identifier) &{ return name === `expr` || name.endsWith(`Expr`) } __ `:` __ expression:(@type(type: `unknown`) Expression) {
-      return tuple([name, expression]);
-    }
-  / name:(@token(type: `parameter`) Identifier) __ `:`__ value:ValueLiteral {
+  = name:(@token(type: `parameter`) Identifier) __ `:`__ value:ValueLiteral {
       return tuple([name, value]);
     }
 
 LiteralMatcher
-  = value:StringLiteral ignoreCase:`i`? {
-      return {
-        type: `literal` as const,
-        location: location(),
-        ignoreCase: ignoreCase !== null,
-        value,
-      };
-    }
+  = value:StringLiteral ignoreCase:`i`? => ({
+      type: `literal` as const,
+      location: location(),
+      ignoreCase: ignoreCase !== null,
+      value,
+    })
 
 ValueLiteral
   = StringLiteral
-  / (@type(type: `unknown`) ArrayLiteral)
-  / BooleanLiteral { return JSON.parse(text()) }
-  / NullLiteral { return null }
+  / @type(`unknown`) ArrayLiteral
+  / BooleanLiteral => (JSON.parse(text()))
+  / NullLiteral => (null)
 
 ArrayLiteral `array`
-  = `[` values:ArrayValues? `]` { return values ?? [] }
+  = `[` values:ArrayValues? `]` => (values ?? [])
 
 ArrayValues
-  = @separator(expr: __ `,` __)
+  = @separator(__ `,` __)
     ValueLiteral*
 
+@token(type: `string`)
 StringLiteral `string`
-  = @token(type: `string`) (
-      / '`' chars:BacktickStringCharacter* '`' { return chars.join(``) }
-      / `"` chars:DoubleStringCharacter* `"` { return chars.join(``) }
-      / `'` chars:SingleStringCharacter* `'` { return chars.join(``) }
-    )
+  = '`' chars:BacktickStringCharacter* '`' => (chars.join(``))
+  / `"` chars:DoubleStringCharacter* `"` => (chars.join(``))
+  / `'` chars:SingleStringCharacter* `'` => (chars.join(``))
 
 BacktickStringCharacter
-  = !('`' / `\\` / LineTerminator) SourceCharacter { return text() }
-  / `\\` sequence:EscapeSequence { return sequence }
+  = !('`' / `\\` / LineTerminator) SourceCharacter => (text())
+  / `\\` sequence:EscapeSequence => (sequence)
   / LineContinuation
 
 DoubleStringCharacter `s(v)b`
-  = !(`"` / `\\` / LineTerminator) SourceCharacter { return text() }
-  / `\\` sequence:EscapeSequence { return sequence }
+  = !(`"` / `\\` / LineTerminator) SourceCharacter => (text())
+  / `\\` sequence:EscapeSequence => (sequence)
   / LineContinuation
 
 SingleStringCharacter
-  = !(`'` / `\\` / LineTerminator) SourceCharacter { return text() }
-  / `\\` sequence:EscapeSequence { return sequence }
+  = !(`'` / `\\` / LineTerminator) SourceCharacter => (text())
+  / `\\` sequence:EscapeSequence => (sequence)
   / LineContinuation
 
+@token(type: `regexp`)
 CharacterClassMatcher `regexp`
-  = @token(type: `regexp`) (
-      `[`
-      inverted:`^`?
-      parts:(ClassCharacterRange / ClassCharacter)*
-      `]`
-      ignoreCase:`i`? {
-        return {
-          type: `class` as const,
-          location: location(),
-          parts: parts.filter(part => part !== ``),
-          inverted: inverted !== null,
-          ignoreCase: ignoreCase !== null,
-        };
-      }
-    )
+  = `[` inverted:`^`? parts:(ClassCharacterRange / ClassCharacter)* `]` ignoreCase:`i`? => ({
+      type: `class` as const,
+      location: location(),
+      parts: parts.filter(part => part !== ``),
+      inverted: inverted !== null,
+      ignoreCase: ignoreCase !== null,
+    })
 
 ClassCharacterRange
   = begin:ClassCharacter `-` end:ClassCharacter {
@@ -456,16 +445,16 @@ ClassCharacterRange
     }
 
 ClassCharacter
-  = !(`]` / `\\` / LineTerminator) SourceCharacter { return text() }
-  / `\\` sequence:EscapeSequence { return sequence }
+  = !(`]` / `\\` / LineTerminator) SourceCharacter => (text())
+  / `\\` sequence:EscapeSequence => (sequence)
   / LineContinuation
 
 LineContinuation
-  = `\\` LineTerminatorSequence { return `` }
+  = `\\` LineTerminatorSequence => (``)
 
 EscapeSequence
   = CharacterEscapeSequence
-  / `0` !DecimalDigit { return `\0` }
+  / `0` !DecimalDigit => (`\0`)
   / HexEscapeSequence
   / UnicodeEscapeSequence
 
@@ -475,15 +464,15 @@ CharacterEscapeSequence
 
 SingleEscapeCharacter
   = ["'`\\]
-  / `b` { return `\b` }
-  / `f` { return `\f` }
-  / `n` { return `\n` }
-  / `r` { return `\r` }
-  / `t` { return `\t` }
-  / `v` { return `\x0B` }   // IE does not recognize `\v`.
+  / `b` => (`\b`)
+  / `f` => (`\f`)
+  / `n` => (`\n`)
+  / `r` => (`\r`)
+  / `t` => (`\t`)
+  / `v` => (`\v`)
 
 NonEscapeCharacter
-  = !(EscapeCharacter / LineTerminator) SourceCharacter { return text() }
+  = !(EscapeCharacter / LineTerminator) SourceCharacter => (text())
 
 EscapeCharacter
   = SingleEscapeCharacter
@@ -508,31 +497,27 @@ HexDigit
   = [0-9a-f]i
 
 AnyMatcher
-  = @token(type: `regexp`) `.` {
-      return {
-        type: `any` as const,
-        location: location(),
-      };
-    }
+  = @token(type: `regexp`) `.` => ({
+      type: `any` as const,
+      location: location(),
+    })
 
 EndMatcher
-  = @token(type: `regexp`) `$` {
-      return {
-        type: `end` as const,
-        location: location(),
-      };
-    }
+  = @token(type: `regexp`) `$` => ({
+      type: `end` as const,
+      location: location(),
+    })
 
 CodeBlock
-  = `{` code:CodeBraces `}` { return code }
-  / `=>` _ `(` code:CodeParen `)` { return `{ return (${code}) }` }
+  = `{` code:CodeBraces `}` => (code)
+  / `=>` __ `(` code:CodeParen `)` => (`{ return (${code}) }`)
 
 CodeBraces
   = $((![{}] SourceCharacter)+
   / `{` CodeBraces `}`)*
 
 CodeParen
-  = $((![{}] SourceCharacter)+
+  = $((![()] SourceCharacter)+
   / `(` CodeParen `)`)*
 
 /*

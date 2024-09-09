@@ -15,7 +15,7 @@ const TOKEN_CODE = `
     ...tokenContext,
     raw,
     location: location(),
-  });
+  } as ParseToken);
 
   onRollback(() => {
     peg$tokens.pop();
@@ -27,6 +27,7 @@ const skipTokens = (expression: asts.Expression): asts.Expression => ({
   code: `
     const skipTokens = peg$skipTokens;
     peg$skipTokens = true;
+
     return () => {
       peg$skipTokens = skipTokens;
     };
@@ -42,42 +43,11 @@ const makeToken = (expression: asts.Expression): asts.Transform => ({
   location: expression.location,
 });
 
-function getTokensInitializer(ast: asts.Ast) {
-  const tokenContexts: Array<any> = [
-    {type: `syntax`},
-  ];
-
-  // We extract all possible token contexts, and use them to generate an array
-  // whose type is derived from them.
-  visitor.run(ast, {
-    visit: (visit, node) => {
-      const tokenAnnotation = node.annotations?.find(annotation => {
-        return annotation.name === `token`;
-      });
-
-      if (tokenAnnotation) {
-        const parameters = tokenAnnotation.parameters;
-        const {tokenContext} = readTokenAnnotation(parameters);
-
-        tokenContexts.push(tokenContext);
-      }
-
-      return visit(node);
-    },
-  });
-
-  const fakeTokens = tokenContexts.map(tokenContext => {
-    return `{...${JSON.stringify({...tokenContext})} as const, raw: "", location: location()},\n`;
-  }).join(``);
-
-  return `[\n${fakeTokens}]`;
-}
-
 /*
  * Removes proxy rules -- that is, rules that only delegate to other rule.
  */
 export function prepareTokenizer(ast: asts.Ast, options: CompileOptions) {
-  if (!options.tokenizer)
+  if (options.mode !== `tokenizer`)
     return;
 
   ast.initializer ??= {
@@ -86,8 +56,44 @@ export function prepareTokenizer(ast: asts.Ast, options: CompileOptions) {
     location: ast.location,
   };
 
+  if (options.output === `types`) {
+    const leafTokens: Array<string> = [`{type:"syntax"}`];
+    const parentTokens: Array<string> = [];
+
+    // We extract all possible token contexts, and use them to generate an array
+    // whose type is derived from them.
+    visitor.run(ast, {
+      visit: (visit, node) => {
+        const tokenAnnotation = node.annotations?.find(annotation => {
+          return annotation.name === `token`;
+        });
+
+        if (tokenAnnotation) {
+          const parameters = tokenAnnotation.parameters;
+          const {children, tokenContext} = readTokenAnnotation(parameters);
+
+          if (children) {
+            parentTokens.push(JSON.stringify({...tokenContext}));
+          } else {
+            leafTokens.push(JSON.stringify({...tokenContext}));
+          }
+        }
+
+        return visit(node);
+      },
+    });
+
+    ast.initializer.code += `
+      type CommonTokenProps = {raw: string, location: ReturnType<typeof location>};
+      type LeafToken = (${leafTokens.join(` | `) || `never`}) & CommonTokenProps;
+      type ParentToken = (${parentTokens.join(` | `) || `never`}) & CommonTokenProps & {children: Array<ParseToken>};
+
+      export type ParseToken = LeafToken | ParentToken;
+    `;
+  }
+
   ast.initializer.code += `
-    const peg$tokens = ${getTokensInitializer(ast)};
+    let peg$tokens: ParseToken[] = [];
 
     let peg$skipTokens = false;
     let peg$tokenContext = {type: "syntax"};

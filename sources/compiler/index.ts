@@ -7,6 +7,7 @@ import {generateBytecode}         from './passes/generate-bytecode';
 import {generateJS}               from './passes/generate-js';
 import {generateTypes}            from './passes/generate-types';
 import {prepareTokenizer}         from './passes/prepare-tokenizer';
+import {removeConditionals}       from './passes/remove-conditionals';
 import {removeProxyRules}         from './passes/remove-proxy-rules';
 import {reportDuplicateLabels}    from './passes/report-duplicate-labels';
 import {reportDuplicateRules}     from './passes/report-duplicate-rules';
@@ -27,10 +28,10 @@ export type CompileOptions = {
   cache: boolean;
   dependencies: Record<string, string>;
   exportVar: string | null;
+  mode: `parser` | `tokenizer`;
   format: `bare` | `commonjs` | `esm` | `typescript`;
   output: `parser` | `source` | `types`;
   parameters: Set<string>;
-  tokenizer: boolean;
   trace: boolean;
 };
 
@@ -40,9 +41,9 @@ export const defaultOptions: CompileOptions = {
   cache: false,
   dependencies: {},
   exportVar: null,
+  mode: `parser`,
   format: `bare`,
   output: `parser`,
-  tokenizer: false,
   parameters: new Set(),
   trace: false,
 };
@@ -73,6 +74,10 @@ const annotations = {
   type: applyType,
 };
 
+// Note that it's different from `getDefaultPipeline`: each member is a dict
+// of all available passes, whereas `getDefaultPipeline` members are arrays
+// of passes to apply.
+//
 const passes = {
   check: {
     reportUndefinedRules,
@@ -82,9 +87,10 @@ const passes = {
     reportInfiniteRepetition,
   },
   transform: {
-    prepareTokenizer,
+    removeConditionals,
     removeProxyRules,
     applyAnnotations,
+    prepareTokenizer,
   },
   generate: {
     generateBytecode,
@@ -102,9 +108,10 @@ const getDefaultPipeline = () => ({
     reportInfiniteRepetition,
   ],
   transform: [
+    removeConditionals,
     removeProxyRules,
-    applyAnnotations,
     prepareTokenizer,
+    applyAnnotations,
   ],
   generate: [
     generateBytecode,
@@ -128,6 +135,10 @@ export function compile(ast: asts.Ast, pipeline: CompilePipeline, userOptions: P
     ...userOptions,
   };
 
+  options.parameters = new Set([
+    ...options.parameters,
+  ]);
+
   options.annotations = {
     ...annotations,
     ...options.annotations,
@@ -135,6 +146,9 @@ export function compile(ast: asts.Ast, pipeline: CompilePipeline, userOptions: P
 
   if (options.output === `parser`)
     options.format = `bare`;
+
+  if (options.mode === `tokenizer`)
+    options.parameters.add(`tokenizer`);
 
   for (const passes of Object.values(pipeline))
     for (const pass of passes)
@@ -144,8 +158,12 @@ export function compile(ast: asts.Ast, pipeline: CompilePipeline, userOptions: P
     throw new Error(`Assertion failed: No code generated.`);
 
   switch (options.output) {
-    case `parser`: return saferEval(ast.code);
-    default: return ast.code;
+    case `parser`:
+      return saferEval(ast.code);
+
+    default: {
+      return ast.code;
+    }
   }
 }
 

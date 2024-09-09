@@ -11,9 +11,10 @@ export function applyAnnotations(ast: asts.Ast, options: CompileOptions) {
   visitor.run(ast, {
     visit: (visit, node) => {
       if (!node.annotations || node.annotations.length === 0)
-        return visit(node);
+        return visit(node) ?? node;
 
       const annotations = node.annotations;
+      delete node.annotations;
 
       let res: asts.Node = node;
       for (let t = annotations.length - 1; t >= 0; --t) {
@@ -28,10 +29,10 @@ export function applyAnnotations(ast: asts.Ast, options: CompileOptions) {
           );
         }
 
-        res = options.annotations[name](ast, node, parameters, options);
+        res = options.annotations[name](ast, res, parameters, options);
       }
 
-      return res;
+      return visit(res) ?? res;
     },
   });
 }

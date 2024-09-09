@@ -59,7 +59,7 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   const generateFromBuiltinCompiler = async (grammar: string) => {
-    return generate(grammar, {output: `parser`, tokenizer: true});
+    return generate(grammar, {output: `parser`, mode: `tokenizer`});
   };
 
   const generateFromProjectCompiler = async (grammarPath: string, grammar: string) => {
@@ -73,7 +73,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     let source: string;
     try {
-      source = await runNode([`-p`, `require('module').createRequire('arpege', process.argv[1]).generate(fs.readFileSync(0), {output: 'source', tokenizer: true})`, grammarPath], {stdin: grammar});
+      source = await runNode([`-p`, `require('module').createRequire('arpege', process.argv[1]).generate(fs.readFileSync(0), {mode: 'tokenizer'})`, grammarPath], {stdin: grammar});
     } catch (err) {
       return generateFromBuiltinCompiler(grammar);
     }
