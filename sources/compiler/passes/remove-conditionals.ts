@@ -8,6 +8,8 @@ import {CompileOptions} from '..';
  */
 export function removeConditionals(ast: asts.Ast, options: CompileOptions) {
   return visitor.run(ast, {
+    type: `replacer`,
+
     choice(visit, node) {
       let childIndex = node.alternatives.length;
 

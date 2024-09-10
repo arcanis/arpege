@@ -224,18 +224,6 @@ export function generateBytecode(ast: asts.Ast) {
     return condCode.concat([bodyCode.length], bodyCode);
   }
 
-  function buildTransaction(bodyCode: Bytecode) {
-    return buildSequence(
-      [op.BEGIN_TRANSACTION],
-      bodyCode,
-      buildCondition(
-        [op.IF_NOT_ERROR],
-        [op.COMMIT_TRANSACTION],
-        [op.ROLLBACK_TRANSACTION],
-      ),
-    );
-  }
-
   function buildCall(functionIndex: number, delta: number, env: Record<string, number>, sp: number) {
     const params = Object.values(env).map(p => sp - p);
 
@@ -308,20 +296,21 @@ export function generateBytecode(ast: asts.Ast) {
     );
   }
 
-  const baseGenerate = visitor.build({
+  return visitor.run(ast, {
     grammar(visit, node) {
-      for (const rule of node.rules)
-        visit(rule);
+      const rules = node.rules.map(rule => {
+        return visit(rule);
+      });
 
-      node.consts = consts;
+      return {...node, rules, consts};
     },
 
     rule(visit, node) {
-      node.bytecode = visit(node.expression, {
+      return {...node, bytecode: visit(node.expression, {
         sp: -1,       // stack pointer
         env: { },     // mapping of label names to stack positions
         action: null, // action nodes pass themselves to children here
-      });
+      })};
     },
 
     named(visit, node, context: Context) {
@@ -354,15 +343,6 @@ export function generateBytecode(ast: asts.Ast) {
           action: null,
         });
 
-        const compiledTransaction = buildTransaction(
-          compiledFirstAlternative,
-        );
-
-        // The last choice doesn't run within a dedicated transaction
-        const compiledSubject = rest.length > 0
-          ? compiledTransaction
-          : compiledFirstAlternative;
-
         const compiledRemainingAlternatives = rest.length > 0 && buildCondition(
           [op.IF_ERROR],
           buildSequence(
@@ -372,7 +352,7 @@ export function generateBytecode(ast: asts.Ast) {
         );
 
         return buildSequence(
-          compiledSubject,
+          compiledFirstAlternative,
           compiledRemainingAlternatives || [],
         );
       }
@@ -425,31 +405,6 @@ export function generateBytecode(ast: asts.Ast) {
         buildEnterScope(functionIndex, 0, env, context.sp),
         expressionCode,
         [op.EXIT_SCOPE],
-      );
-    },
-
-    transform(visit, node, context: Context) {
-      const env = {...context.env, current: context.sp + 2};
-      const functionIndex = addFunctionConst(Object.keys(env), node.code);
-
-      const expressionCode = visit(node.expression, {
-        sp: context.sp + 1,
-        env: context.env,
-        action: null,
-      });
-
-      return buildSequence(
-        [op.PUSH_CURR_POS],
-        expressionCode,
-        buildCondition(
-          [op.IF_NOT_ERROR],
-          buildSequence(
-            [op.LOAD_SAVED_POS, 1],
-            buildCall(functionIndex, 1, env, context.sp + 2),
-          ),
-          [],
-        ),
-        [op.NIP],
       );
     },
 
@@ -600,13 +555,11 @@ export function generateBytecode(ast: asts.Ast) {
     },
 
     optional(visit, node, context: Context) {
-      const compiledExpression = buildTransaction(
-        visit(node.expression, {
-          sp: context.sp,
-          env: {...context.env},
-          action: null,
-        }),
-      );
+      const compiledExpression = visit(node.expression, {
+        sp: context.sp,
+        env: {...context.env},
+        action: null,
+      });
 
       const compiledCondition = buildCondition(
         [op.IF_ERROR],
@@ -621,13 +574,11 @@ export function generateBytecode(ast: asts.Ast) {
     },
 
     zeroOrMore(visit, node, context: Context) {
-      const compiledExpression = buildTransaction(
-        visit(node.expression, {
-          sp: context.sp + 1,
-          env: {...context.env},
-          action: null,
-        }),
-      );
+      const compiledExpression = visit(node.expression, {
+        sp: context.sp + 1,
+        env: {...context.env},
+        action: null,
+      });
 
       return buildSequence(
         [op.PUSH_EMPTY_ARRAY],
@@ -644,16 +595,12 @@ export function generateBytecode(ast: asts.Ast) {
         action: null,
       });
 
-      const compiledTransaction = buildTransaction(
-        compiledExpression,
-      );
-
       return buildSequence(
         [op.PUSH_EMPTY_ARRAY],
         compiledExpression,
         buildCondition(
           [op.IF_NOT_ERROR],
-          buildSequence(buildAppendLoop(compiledTransaction), [op.POP]),
+          buildSequence(buildAppendLoop(compiledExpression), [op.POP]),
           buildSequence([op.POP], [op.POP], [op.PUSH_FAILED]),
         ),
       );
@@ -750,10 +697,4 @@ export function generateBytecode(ast: asts.Ast) {
       );
     },
   });
-
-  const generate = (ast: asts.Node, context?: Context) => {
-    return baseGenerate(ast, context);
-  };
-
-  generate(ast);
 }

@@ -51,9 +51,9 @@ export const SILENT_FAILS_OFF = 30;    // SILENT_FAILS_OFF
 
 /* Cleanup functions */
 
-export const BEGIN_TRANSACTION = 31;   // BEGIN_TRANSACTION
-export const ROLLBACK_TRANSACTION = 32;   // ROLLBACK_TRANSACTION
-export const COMMIT_TRANSACTION = 33;   // COMMIT_TRANSACTION
+// export const BEGIN_TRANSACTION = 31;   // BEGIN_TRANSACTION
+// export const ROLLBACK_TRANSACTION = 32;   // ROLLBACK_TRANSACTION
+// export const COMMIT_TRANSACTION = 33;   // COMMIT_TRANSACTION
 
 /* Data sharing */
 

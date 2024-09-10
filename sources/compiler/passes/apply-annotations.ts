@@ -8,7 +8,9 @@ const BUILTIN_ANNOTATIONS = new Set([
 ]);
 
 export function applyAnnotations(ast: asts.Ast, options: CompileOptions) {
-  visitor.run(ast, {
+  return visitor.run(ast, {
+    type: `replacer`,
+
     visit: (visit, node) => {
       if (!node.annotations || node.annotations.length === 0)
         return visit(node) ?? node;

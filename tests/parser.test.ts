@@ -74,6 +74,10 @@ describe(`PEG.js grammar parser`, () => {
     return oneRuleGrammar({type: `any`});
   }
 
+  function endGrammar() {
+    return oneRuleGrammar({type: `end`});
+  }
+
   function ruleRefGrammar(name: string) {
     return oneRuleGrammar({type: `ruleRef`, name});
   }
@@ -303,7 +307,6 @@ describe(`PEG.js grammar parser`, () => {
   /* Canonical IdentifierStart is "a". */
   it(`parses IdentifierStart`, () => {
     expect(`start = a`).toParseAs(ruleRefGrammar(`a`));
-    expect(`start = $`).toParseAs(ruleRefGrammar(`$`));
     expect(`start = _`).toParseAs(ruleRefGrammar(`_`));
     expect(`start = \\u0061`).toParseAs(ruleRefGrammar(`a`));
   });
@@ -474,6 +477,11 @@ describe(`PEG.js grammar parser`, () => {
   /* Canonical AnyMatcher is ".". */
   it(`parses AnyMatcher`, () => {
     expect(`start = .`).toParseAs(anyGrammar());
+  });
+
+  /* Canonical EndMatcher is "$". */
+  it(`parses AnyMatcher`, () => {
+    expect(`start = $`).toParseAs(endGrammar());
   });
 
   /* Canonical CodeBlock is "{ code }". */

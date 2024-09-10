@@ -74,6 +74,10 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
       return `string`;
     },
 
+    end() {
+      return `""`;
+    },
+
     literal(visit, node, context: Context) {
       return JSON.stringify(node.value).replace(/[\u007F-\uFFFF]/g, chr => {
         return `\\u${(`0000${chr.charCodeAt(0).toString(16)}`).slice(-4)}`;
@@ -138,7 +142,7 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
 
     labeled(visit, node, context: Context) {
       if (node.label)
-        context.env[node.label] = visit(node.expression);
+        context.env[node.label] = visit(node.expression, context);
 
       return visit(node.expression, context);
     },
@@ -225,11 +229,18 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
   parts.push(`declare function tuple<T extends any[]>(val: [...T]): [...T];\n`);
   parts.push(`declare function error(message: string, location?: PegJSLocation): never;\n`);
   parts.push(`declare function expected(description: string, location?: PegJSLocation): never;\n`);
-  parts.push(`declare function onRollback(fn: () => void): void;\n`);
   parts.push(`declare function location(): PegJSLocation;\n`);
   parts.push(`declare function text(): string;\n`);
   parts.push(`\n`);
-  parts.push(`type ParseResult = ${ast.result ? `typeof ${ast.result}` : `ast.${firstRuleType}`};\n`);
+
+  if (ast.result) {
+    parts.push(`function peg$return(peg$result: ast.${firstRuleType}) {\n`);
+    parts.push(`  return (${ast.result});\n`);
+    parts.push(`}\n`);
+    parts.push(`\n`);
+  }
+
+  parts.push(`type ParseResult = ${ast.result ? `ReturnType<typeof peg$return>` : `ast.${firstRuleType}`};\n`);
   parts.push(`declare const parse: (data: string) => ParseResult;\n`);
   parts.push(`\n`);
   parts.push(`export {PegJSLocation, PegJSPosition, ParseResults, ParseResult, ast, parse};\n`);
@@ -238,5 +249,5 @@ export function generateTypes(ast: asts.Ast, options: CompileOptions) {
   parts.push(`declare const val: ParseResult;\n`);
   parts.push(`val;\n`);
 
-  ast.code = parts.join(``);
+  return {...ast, code: parts.join(``)};
 }

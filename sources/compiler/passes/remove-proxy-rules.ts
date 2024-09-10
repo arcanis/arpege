@@ -7,31 +7,37 @@ import {CompileOptions} from '..';
  */
 export function removeProxyRules(ast: asts.Ast, options: CompileOptions) {
   function replaceRuleRefs(ast: asts.Ast, from: string, to: string) {
-    const replace = visitor.build({
+    return visitor.run(ast, {
+      type: `replacer`,
+
       ruleRef(visit, node) {
         if (node.name === from) {
-          node.name = to;
+          return {...node, name: to};
+        } else {
+          return node;
         }
       },
     });
-
-    replace(ast);
   }
 
-  const indices = [];
+  const replacements: Array<[string, string]> = [];
+  const fixedRules: Array<asts.Rule> = [];
 
-  for (const [i, rule] of ast.rules.entries()) {
+  for (const rule of ast.rules) {
     if (rule.expression.type === `ruleRef`) {
-      replaceRuleRefs(ast, rule.name, rule.expression.name);
-      if (!options.allowedStartRules.includes(rule.name)) {
-        indices.push(i);
+      replacements.push([rule.name, rule.expression.name]);
+      if (options.allowedStartRules.includes(rule.name)) {
+        fixedRules.push(rule);
       }
+    } else {
+      fixedRules.push(rule);
     }
   }
 
-  indices.reverse();
+  ast = {...ast, rules: fixedRules};
 
-  for (const i of indices) {
-    ast.rules.splice(i, 1);
-  }
+  for (const [from, to] of replacements)
+    ast = replaceRuleRefs(ast, from, to);
+
+  return ast;
 }

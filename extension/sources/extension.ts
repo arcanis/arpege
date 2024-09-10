@@ -2,7 +2,6 @@ import pegjsGrammar     from 'arpege/examples/grammar.pegjs.pegjs';
 import {asts, generate} from 'arpege';
 import {execFile}       from 'child_process';
 import {posix}          from 'path';
-import {promisify}      from 'util';
 import * as vscode      from 'vscode';
 
 const saferEval = eval;
@@ -12,7 +11,7 @@ const BUILTIN_GRAMMARS = {
 };
 
 export async function activate(context: vscode.ExtensionContext) {
-  const tokenTypes = [`namespace`, `class`, `enum`, `interface`, `struct`, `typeParameter`, `type`, `parameter`, `variable`, `property`, `enumMember`, `decorator`, `event`, `function`, `method`, `macro`, `label`, `comment`, `string`, `keyword`, `number`, `regexp`, `operator`, `code:js`, `error`];
+  const tokenTypes = [`namespace`, `class`, `enum`, `interface`, `struct`, `typeParameter`, `type`, `parameter`, `variable`, `property`, `enumMember`, `decorator`, `event`, `function`, `method`, `macro`, `label`, `comment`, `string`, `keyword`, `number`, `regexp`, `operator`, `code:js`, `code:ts`, `error`];
   const tokenModifiers = [`declaration`, `definition`, `readonly`, `static`, `deprecated`, `abstract`, `async`, `modification`, `documentation`, `defaultLibrary`];
   const legend = new vscode.SemanticTokensLegend(tokenTypes, tokenModifiers);
 

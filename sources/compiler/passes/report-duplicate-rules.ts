@@ -6,7 +6,7 @@ import {visitor}      from '../visitor';
 export function reportDuplicateRules(ast: asts.Ast) {
   const rules = new Map<string, asts.Location | null>();
 
-  const check = visitor.build({
+  visitor.run(ast, {
     rule(visit, node) {
       const priorDefinition = rules.get(node.name);
 
@@ -21,5 +21,5 @@ export function reportDuplicateRules(ast: asts.Ast) {
     },
   });
 
-  check(ast);
+  return ast;
 }

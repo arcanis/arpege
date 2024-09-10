@@ -447,29 +447,6 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
             ip++;
           } break;
 
-          case op.BEGIN_TRANSACTION: { // BEGIN_TRANSACTION
-            parts.push(`peg$transactions.unshift([]);`);
-
-            ip++;
-          } break;
-
-          case op.ROLLBACK_TRANSACTION: { // ROLLBACK_TRANSACTION
-            parts.push(`peg$transactions.shift().forEach(fn => fn());`);
-
-            ip++;
-          } break;
-
-          case op.COMMIT_TRANSACTION: { // COMMIT_TRANSACTION
-            parts.push(`peg$currentTransaction = peg$transactions.shift();`);
-            parts.push(`if (peg$transactions.length > 0) {`);
-            parts.push(`  peg$transactions[0].unshift(...peg$currentTransaction);`);
-            parts.push(`} else {`);
-            parts.push(`  peg$currentTransaction = undefined;`);
-            parts.push(`}`);
-
-            ip++;
-          } break;
-
           case op.ENTER_SCOPE: { // ENTER_SCOPE f, n, pc, p1, p2, ..., pN
             compileCall();
             parts.push(`peg$scopes.unshift(${stack.pop()});`);
@@ -794,18 +771,6 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
       `    return peg$computeLocation(peg$savedPos, peg$currPos);`,
       `  }`,
       ``,
-      `  function onRollback(fn) {`,
-    ].join(`\n`));
-
-    parts.push(options.cache
-      ? `    throw new Error('Parsing transactions can\\'t be used if the cache is enabled');`
-      : `    peg$transactions[0]?.unshift(fn);`);
-
-    parts.push([
-      ``,
-      `    `,
-      `  }`,
-      ``,
       `  function expected(description, location) {`,
       `    location = location !== void 0 ? location : peg$computeLocation(peg$savedPos, peg$currPos)`,
       ``,
@@ -933,6 +898,10 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
       `    );`,
       `  }`,
       ``,
+      `  function peg$return() {`,
+      `    return (${ast.result ?? `peg$result`});`,
+      `  }`,
+      ``,
     ].join(`\n`));
 
     for (const rule of ast.rules) {
@@ -950,7 +919,7 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
     parts.push([
       ``,
       `  if (peg$result !== peg$FAILED && peg$currPos === input.length) {`,
-      `    return ${ast.result ?? `peg$result`};`,
+      `    return peg$return();`,
       `  } else {`,
       `    if (peg$result !== peg$FAILED && peg$currPos < input.length) {`,
       `      peg$fail(peg$endExpectation());`,
@@ -1100,5 +1069,5 @@ export function generateJS(ast: asts.Ast, options: CompileOptions) {
     return result;
   }
 
-  ast.code = generateWrapper(generateToplevel());
+  return {...ast, code: generateWrapper(generateToplevel())};
 }

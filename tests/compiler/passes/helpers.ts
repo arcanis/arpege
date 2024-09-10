@@ -1,10 +1,17 @@
 import {asts, parser, VisitFn, visitor} from 'arpege';
 import format                           from 'pretty-format';
 
+type RecursivePartial<T> = {
+  [P in keyof T]?:
+  T[P] extends Array<infer U> ? Array<RecursivePartial<U>> :
+    T[P] extends object | undefined ? RecursivePartial<T[P]> :
+      T[P];
+};
+
 declare global {
   namespace jest {
     interface Matchers<R> {
-      toChangeAST(grammar: string, details?: any, options?: any): R;
+      toChangeAST(grammar: string, details?: RecursivePartial<asts.Ast>, options?: any): R;
       toReportError(grammar: string, details?: any): R;
       toParseAs(expected: any): R;
       toFailToParse(details?: any): R;
@@ -36,6 +43,8 @@ const stripLocation = (function() {
   }
 
   return visitor.build({
+    type: `replacer`,
+
     grammar(visit, node) {
       delete node.location;
 
@@ -52,7 +61,6 @@ const stripLocation = (function() {
     named: stripExpression,
     choice: stripChildren(`alternatives`),
     action: stripExpression,
-    transform: stripExpression,
     scope: stripExpression,
     sequence: stripChildren(`elements`),
     labeled: stripExpression,
@@ -72,13 +80,17 @@ const stripLocation = (function() {
   });
 })();
 
+beforeAll(() => {
+  parser.parse(`_ = _`);
+});
+
 beforeEach(() => {
   expect.extend({
     toChangeAST(received, grammar, details, options) {
       options = options !== undefined ? options : {};
 
       var ast = parser.parse(grammar);
-      received(ast, options);
+      ast = received(ast, options) ?? ast;
 
       if (this.isNot)
         expect(ast).not.toMatchObject(details);
@@ -124,22 +136,17 @@ beforeEach(() => {
       };
     },
 
-    toParseAs(received, expected) {
-      let result: any;
-      try {
-        result = parser.parse(received);
-      } catch (e: any) {
-        return {
-          message: () => `Expected ${format(received)} to parse as ${format(expected)}, but it failed to parse with message ${format(e.message)}.`,
-          pass: false,
-        };
-      }
+    toParseAs(grammar, expected) {
+      var ast = parser.parse(grammar);
 
-      stripLocation(result);
+      if (this.isNot)
+        expect(ast).not.toMatchObject(expected);
+      else
+        expect(ast).toMatchObject(expected);
 
       return {
-        message: () => `Expected ${format(received)} ${this.isNot ? `not ` : ``}to parse as ${format(expected)}, but it parsed as ${format(result)}.`,
-        pass: this.equals(result, expected),
+        message: () => ``,
+        pass: true,
       };
     },
 

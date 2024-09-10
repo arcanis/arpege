@@ -30,17 +30,17 @@ stylesheet
     rules:(::(ruleset / media / page) (CDO S* / CDC S*)*)*
     {
       return {
-        type:    literal("StyleSheet"),
+        type:    "StyleSheet" as const,
         charset: charset,
         imports: imports,
-        rules:   groupBy(rules, "type")
+        rules:   Object.groupBy(rules, ({type}) => type)
       };
     }
 
 import
   = IMPORT_SYM S* href:(STRING / URI) S* media:media_list? ";" S* {
       return {
-        type:  literal("ImportRule"),
+        type:  "ImportRule" as const,
         href:  href,
         media: media !== null ? media : []
       };
@@ -49,7 +49,7 @@ import
 media
   = MEDIA_SYM S* media:media_list "{" S* rules:ruleset* "}" S* {
       return {
-        type: literal("MediaRule"),
+        type: "MediaRule" as const,
         media: media,
         rules: rules
       };
@@ -69,22 +69,22 @@ page
     "}" S*
     {
       return {
-        type:         literal("PageRule"),
+        type:         "PageRule" as const,
         selector:     selector,
         declarations: declarations
       };
     }
 
 pseudo_page
-  = ":" value:IDENT S* { return { type: literal("PseudoSelector"), value: value }; }
+  = ":" value:IDENT S* { return { type: "PseudoSelector" as const, value: value }; }
 
 operator
-  = "/" S* { return literal("/"); }
-  / "," S* { return literal(","); }
+  = "/" S* { return "/" as const; }
+  / "," S* { return "," as const; }
 
 combinator
-  = "+" S* { return literal("+"); }
-  / ">" S* { return literal(">"); }
+  = "+" S* { return "+" as const; }
+  / ">" S* { return ">" as const; }
 
 property
   = name:IDENT S* { return name; }
@@ -96,17 +96,17 @@ ruleset
     "}" S*
     {
       return {
-        type:         literal("RuleSet"),
+        type:         "RuleSet" as const,
         selectors:    selectors,
         declarations: declarations
       };
     }
 
+@type("{type: 'Selector', combinator: ast.Combinator, left: ast.Selector, right: ast.SimpleSelector} | ast.SimpleSelector")
 selector
-  = @type(type: "{type: 'Selector', combinator: ast.Combinator, left: ast.Selector, right: ast.SimpleSelector} | ast.SimpleSelector")
-  / left:simple_selector S* combinator:combinator right:selector {
+  = left:simple_selector S* combinator:combinator right:selector {
       return {
-        type:       literal("Selector"),
+        type:       "Selector" as const,
         combinator: combinator,
         left:       left,
         right:      right
@@ -114,7 +114,7 @@ selector
     }
   / left:simple_selector S+ right:selector {
       return {
-        type:       literal("Selector"),
+        type:       "Selector" as const,
         combinator: " ",
         left:       left,
         right:      right
@@ -125,14 +125,14 @@ selector
 simple_selector
   = element:element_name qualifiers:(id / class / attrib / pseudo)* {
       return {
-        type:       literal("SimpleSelector"),
+        type:       "SimpleSelector" as const,
         element:    element,
         qualifiers: qualifiers
       };
     }
   / qualifiers:(id / class / attrib / pseudo)+ {
       return {
-        type:       literal("SimpleSelector"),
+        type:       "SimpleSelector" as const,
         element:    "*",
         qualifiers: qualifiers
       };
@@ -140,11 +140,11 @@ simple_selector
 
 id
   = @token(type: "class")
-  id:HASH { return { type: literal("IDSelector"), id: id }; }
+  id:HASH { return { type: "IDSelector" as const, id: id }; }
 
 class
   = @token(type: "class")
-    "." class_:IDENT { return { type: literal("ClassSelector"), "class": class_ }; }
+    "." class_:IDENT { return { type: "ClassSelector" as const, "class": class_ }; }
 
 element_name
   = IDENT
@@ -157,7 +157,7 @@ attrib
     "]"
     {
       return {
-        type:      literal("AttributeSelector"),
+        type:      "AttributeSelector" as const,
         attribute: attribute,
         operator:  operatorAndValue?.operator,
         value:     operatorAndValue?.value
@@ -169,19 +169,19 @@ pseudo
     value:(
         name:FUNCTION S* params:(IDENT S*)? ")" {
           return {
-            type:   literal("Function"),
+            type:   "Function" as const,
             name:   name,
             params: params !== null ? [params[0]] : []
           };
         }
       / IDENT
     )
-    { return { type: literal("PseudoSelector"), value: value }; }
+    { return { type: "PseudoSelector" as const, value: value }; }
 
 declaration
   = name:property ':' S* value:expr prio:prio? {
       return {
-        type:      literal("Declaration"),
+        type:      "Declaration" as const,
         name:      name,
         value:     value,
         important: prio !== null
@@ -204,24 +204,24 @@ term
     S*
     {
       return {
-        type:  literal("Quantity"),
+        type:  "Quantity" as const,
         value: quantity.value,
         unit:  quantity.unit
       };
     }
-  / value:STRING S* { return { type: literal("String"), value: value }; }
-  / value:URI S*    { return { type: literal("URI"),    value: value }; }
+  / value:STRING S* { return { type: "String" as const, value: value }; }
+  / value:URI S*    { return { type: "URI" as const,    value: value }; }
   / function
   / hexcolor
-  / value:IDENT S*  { return { type: literal("Ident"),  value: value }; }
+  / value:IDENT S*  { return { type: "Ident" as const,  value: value }; }
 
 function
   = name:FUNCTION S* params:(@type(type: "any") expr) ")" S* {
-      return { type: literal("Function"), name: name, params: params };
+      return { type: "Function" as const, name: name, params: params };
     }
 
 hexcolor
-  = value:HASH S* { return { type: literal("Hexcolor"), value: value }; }
+  = value:HASH S* { return { type: "Hexcolor" as const, value: value }; }
 
 /* ----- G.2 Lexical scanner ----- */
 

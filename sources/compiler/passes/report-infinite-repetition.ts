@@ -7,7 +7,7 @@ import {visitor}      from '../visitor';
  * grammar, which prevents infinite loops in the generated parser.
  */
 export function reportInfiniteRepetition(ast: asts.Ast) {
-  const check = visitor.build({
+  visitor.run(ast, {
     zeroOrMore(visit, node) {
       if (!asts.alwaysConsumesOnSuccess(ast, node.expression)) {
         throw new GrammarError(
@@ -27,5 +27,5 @@ export function reportInfiniteRepetition(ast: asts.Ast) {
     },
   });
 
-  check(ast);
+  return ast;
 }

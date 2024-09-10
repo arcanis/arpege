@@ -218,29 +218,29 @@ SourceCharacter
   = .
 
 WhiteSpace `whitespace`
-  = `\t`
+  = $(
+  / `\t`
   / `\v`
   / `\f`
   / ` `
   / `\u00A0`
   / `\uFEFF`
   / Zs
+  )+
 
-LineTerminator
-  = [\n\r\u2028\u2029]
-
-LineTerminatorSequence `end of line`
-  = `\n`
+LineTerminator `end of line`
+  = $(
+  / `\n`
   / `\r\n`
   / `\r`
   / `\u2028`
   / `\u2029`
+  )+
 
+@token(type: `comment`)
 Comment `comment`
-  = @token(type: `comment`) (
-      / MultiLineComment
-      / SingleLineComment
-    )
+  = MultiLineComment
+  / SingleLineComment
 
 MultiLineComment
   = `/*` (!`*/` SourceCharacter)* `*/`
@@ -450,7 +450,7 @@ ClassCharacter
   / LineContinuation
 
 LineContinuation
-  = `\\` LineTerminatorSequence => (``)
+  = `\\` LineTerminator => (``)
 
 EscapeSequence
   = CharacterEscapeSequence
@@ -509,8 +509,8 @@ EndMatcher
     })
 
 CodeBlock
-  = `{` code:CodeBraces `}` => (code)
-  / `=>` __ `(` code:CodeParen `)` => (`{ return (${code}) }`)
+  = @token(type: `code:ts`) `{` code:CodeBraces `}` => (code)
+  / `=>` __ code:(@token(type: `code:ts`) `(` ::CodeParen `)`) => (`{ return (${code}) }`)
 
 CodeBraces
   = $((![{}] SourceCharacter)+
@@ -620,7 +620,7 @@ WithToken       = `with`       !IdentifierPart
 /* Skipped */
 
 __
-  = (WhiteSpace / LineTerminatorSequence / Comment)*
+  = ($(WhiteSpace / LineTerminator)+ / Comment)*
 
 _
   = (WhiteSpace / MultiLineCommentNoLineTerminator)*
@@ -629,7 +629,7 @@ _
 
 EOS
   = __ `;`
-  / _ SingleLineComment? LineTerminatorSequence
+  / _ SingleLineComment? LineTerminator
   / __ EOF
 
 EOF

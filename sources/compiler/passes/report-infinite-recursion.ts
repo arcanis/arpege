@@ -17,16 +17,16 @@ import {visitor}      from '../visitor';
 export function reportInfiniteRecursion(ast: asts.Ast) {
   const visitedRules = new Set<string>();
 
-  const check = visitor.build({
+  visitor.run(ast, {
     rule(visit, node) {
       visitedRules.add(node.name);
-      check(node.expression);
+      visit(node.expression);
       visitedRules.delete(node.name);
     },
 
     sequence(visit, node) {
       for (const element of node.elements) {
-        check(element);
+        visit(element);
 
         if (asts.alwaysConsumesOnSuccess(ast, element)) {
           break;
@@ -46,9 +46,9 @@ export function reportInfiniteRecursion(ast: asts.Ast) {
       if (typeof targetRule === `undefined`)
         return;
 
-      check(targetRule);
+      visit(targetRule);
     },
   });
 
-  check(ast);
+  return ast;
 }

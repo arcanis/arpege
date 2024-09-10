@@ -737,21 +737,8 @@ namespace ast {
   >;
   export type SemanticPredicateOperator = "&" | "!";
   export type SourceCharacter = string;
-  export type WhiteSpace =
-    | "\t"
-    | "\u000b"
-    | "\f"
-    | " "
-    | "\u00a0"
-    | "\ufeff"
-    | ast.Zs;
+  export type WhiteSpace = string;
   export type LineTerminator = string;
-  export type LineTerminatorSequence =
-    | "\n"
-    | "\r\n"
-    | "\r"
-    | "\u2028"
-    | "\u2029";
   export type Comment = ast.MultiLineComment | ast.SingleLineComment;
   export type MultiLineComment = [
     "/*",
@@ -957,15 +944,13 @@ namespace ast {
   export type VoidToken = ["void", undefined];
   export type WhileToken = ["while", undefined];
   export type WithToken = ["with", undefined];
-  export type Unknown = Array<
-    ast.WhiteSpace | ast.LineTerminatorSequence | ast.Comment
-  >;
+  export type Unknown = Array<string | ast.Comment>;
   export type Unknown1 = Array<
     ast.WhiteSpace | ast.MultiLineCommentNoLineTerminator
   >;
   export type Eos =
     | [ast.Unknown, ";"]
-    | [ast.Unknown1, ast.SingleLineComment | null, ast.LineTerminatorSequence]
+    | [ast.Unknown1, ast.SingleLineComment | null, ast.LineTerminator]
     | [ast.Unknown, ast.Eof];
   export type Eof = undefined;
 }
@@ -993,7 +978,6 @@ declare type ParseResults = {
   SourceCharacter: ast.SourceCharacter;
   WhiteSpace: ast.WhiteSpace;
   LineTerminator: ast.LineTerminator;
-  LineTerminatorSequence: ast.LineTerminatorSequence;
   Comment: ast.Comment;
   MultiLineComment: ast.MultiLineComment;
   MultiLineCommentNoLineTerminator: ast.MultiLineCommentNoLineTerminator;

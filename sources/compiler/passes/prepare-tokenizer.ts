@@ -3,42 +3,16 @@ import * as asts             from '../asts';
 import {visitor}             from '../visitor';
 import {CompileOptions}      from '..';
 
-const TOKEN_CODE = `
-  if (peg$skipTokens)
-    return;
-
-  const raw = text();
-  if (!raw)
-    return;
-
-  peg$tokens.push({
-    ...tokenContext,
-    raw,
-    location: location(),
-  } as ParseToken);
-
-  onRollback(() => {
-    peg$tokens.pop();
-  });
-`;
-
 const skipTokens = (expression: asts.Expression): asts.Expression => ({
-  type: `scope`,
-  code: `
-    const skipTokens = peg$skipTokens;
-    peg$skipTokens = true;
-
-    return () => {
-      peg$skipTokens = skipTokens;
-    };
-  `,
+  type: `action`,
+  code: `return []`,
   expression,
   location: expression.location,
 });
 
-const makeToken = (expression: asts.Expression): asts.Transform => ({
-  type: `transform`,
-  code: `peg$pushToken(); return current;`,
+const makeToken = (expression: asts.Expression): asts.Expression => ({
+  type: `action`,
+  code: `return token({type: "syntax"})`,
   expression,
   location: expression.location,
 });
@@ -48,9 +22,9 @@ const makeToken = (expression: asts.Expression): asts.Transform => ({
  */
 export function prepareTokenizer(ast: asts.Ast, options: CompileOptions) {
   if (options.mode !== `tokenizer`)
-    return;
+    return ast;
 
-  ast.initializer ??= {
+  ast.initializer = {
     type: `initializer`,
     code: ``,
     location: ast.location,
@@ -93,19 +67,45 @@ export function prepareTokenizer(ast: asts.Ast, options: CompileOptions) {
   }
 
   ast.initializer.code += `
-    let peg$tokens: ParseToken[] = [];
+    function clean(tokens: any): ParseToken[] {
+      return [tokens].flat(Infinity).filter(token => {
+        if (token?.children) token.children = clean(token.children);
+        return token !== null;
+      });
+    }
 
-    let peg$skipTokens = false;
-    let peg$tokenContext = {type: "syntax"};
-
-    function peg$pushToken(tokenContext = peg$tokenContext) {
-      ${TOKEN_CODE}
+    function token<T extends object>(ctx: T) {
+      return {
+        type: "syntax",
+        raw: text(),
+        location: location(),
+        ...ctx,
+      };
     }
   `;
 
-  ast.result = `peg$tokens`;
+  ast.result = `
+    clean(peg$result)
+  `;
 
-  visitor.run(ast, {
+  ast = visitor.run(ast, {
+    action(visit, node) {
+      return {
+        ...node,
+        type: `group`,
+        expression: visit(node.expression),
+      };
+    },
+    labeled(visit, node) {
+      return {
+        ...node,
+        type: `group`,
+        expression: visit(node.expression),
+      };
+    },
+  });
+
+  return visitor.run(ast, {
     class(visit, node) {
       return makeToken(node);
     },
@@ -113,7 +113,7 @@ export function prepareTokenizer(ast: asts.Ast, options: CompileOptions) {
       return makeToken(node);
     },
     text(visit, node) {
-      return makeToken(skipTokens(node));
+      return makeToken(node);
     },
     simpleNot(visit, node) {
       return skipTokens(node);

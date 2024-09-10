@@ -8,7 +8,7 @@ export function reportDuplicateLabels(ast: asts.Ast) {
     visit(node.expression, {...env});
   }
 
-  return visitor.run(ast, {
+  visitor.run(ast, {
     rule(visit, node) {
       visit(node.expression, {});
     },
@@ -46,4 +46,6 @@ export function reportDuplicateLabels(ast: asts.Ast) {
     oneOrMore: checkExpressionWithClonedEnv,
     group: checkExpressionWithClonedEnv,
   });
+
+  return ast;
 }

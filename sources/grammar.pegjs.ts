@@ -8,8 +8,11 @@ let parserImpl: any;
 
 const parser = {
   parse(...args: Array<any>) {
-    if (typeof parserImpl === `undefined`)
-      parserImpl = generate(grammar, {format: `commonjs`, output: `parser`, parser: lkgParser});
+    if (typeof parserImpl === `undefined`) {
+      parserImpl = process.env.USE_LKG
+        ? lkgParser
+        : generate(grammar, {format: `commonjs`, output: `parser`, parser: lkgParser});
+    }
 
     return parserImpl.parse(...args);
   },

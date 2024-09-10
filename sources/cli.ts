@@ -52,6 +52,8 @@ runExit({
     });
 
     parameters = Option.Array(`--enable`, []);
+
+    withCache = Option.Boolean(`--with-cache`, false);
     withTypes = Option.Boolean(`--with-types`, false);
 
     file = Option.String();
@@ -88,7 +90,7 @@ runExit({
           const parameters = new Set(this.parameters);
 
           if (!this.withTypes || output) {
-            const code = generate(source, {parameters, mode, output: `source`, format});
+            const code = generate(source, {cache: this.withCache, parameters, mode, output: `source`, format});
 
             if (output) {
               await fs.promises.writeFile(output, await prettier.format(code, {parser: `acorn`}));

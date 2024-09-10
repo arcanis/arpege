@@ -27,7 +27,7 @@ const plugins = ({tsconfig}) => [
     include: `**/examples/*.pegjs`,
   }),
   nodeResolve({
-    resolveOnly: [`arpege`, `lodash`],
+    resolveOnly: [`@swc/wasm-typescript`, `arpege`, `lodash`],
   }),
   commonjs(),
 ];

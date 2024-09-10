@@ -58,6 +58,12 @@ export type End = NodeBase & {
   type: `end`;
 };
 
+export type Grammar = NodeBase & {
+  type: `grammar`;
+  initializer: Initializer | null;
+  rules: Array<Rule>;
+};
+
 export type Group = NodeBase & {
   type: `group`;
   expression: Expression;
@@ -101,12 +107,6 @@ export type Scope = NodeBase & {
 export type Sequence = NodeBase & {
   type: `sequence`;
   elements: Array<Expression>;
-};
-
-export type Transform = NodeBase & {
-  type: `transform`;
-  code: string;
-  expression: Expression;
 };
 
 export type Labeled = NodeBase & {
@@ -184,7 +184,6 @@ export type Expression =
   | SimpleAnd
   | SimpleNot
   | Text
-  | Transform
   | ZeroOrMore;
 
 export type Node =
@@ -237,7 +236,6 @@ export function alwaysConsumesOnSuccess(ast: Ast, node: Node) {
 
     action: consumesExpression,
     scope: consumesExpression,
-    transform: consumesExpression,
 
     sequence(visit, node) {
       return node.elements.some(element => visit(element));

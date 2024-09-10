@@ -209,23 +209,6 @@ Number = [0-9]+ => (parseInt(text(), 10))
 
 The `TermType` type will then become `NumberType | never`, which TypeScript will coalesce into simply `NumberType`. In more complicated cases, you may have to provide more concrete types or even fallback to `unknown` or `any`; check the [`grammar.css.pegjs`](/examples/grammar.css.pegjs) and [`grammar.pegjs.pegjs`](/examples/grammar.pegjs.pegjs) files in this repository for some examples.
 
-### Transactional parsing
-
-> **Warning**
-> 
-> This feature isn't compatible with the `cache: true` option.
-
-Parsers have access to a new `onRollback` function. This function will be called if Arpege detects that the alternative it follows won't work, and can be used to clean state previously set by your actions. For example:
-
-```pegjs
-identifier = name:$[a-z]+ {
-  identifiers.push(name);
-  onRollback(() => {
-    identifiers.pop();
-  });
-}
-```
-
 ## Why forking PegJS?
 
 I wanted to use PegJS on a small language idea I have. However, it proved very difficult to integrate it within VSCode with proper syntactic coloration. I started working on implementing a tokenizer in my own fork, but before that I decided to move the codebase to TypeScript to make this work easier and safer.

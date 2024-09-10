@@ -1,7 +1,7 @@
 {
   "name": "supersyntax",
   "publisher": "arcanis",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "displayName": "SuperSyntax - custom grammars for VSCode",
   "description": "Adds support for Arpege-powered languages in VSCode",
   "repository": {
@@ -45,7 +45,8 @@
         "scopeName": "source.supersyntax",
         "path": "./supersyntax.tmGrammar.json",
         "embeddedLanguages": {
-          "meta.embedded.javascript": "javascript"
+          "meta.embedded.javascript": "javascript",
+          "meta.embedded.typescript": "typescript"
         }
       }
     ],
@@ -68,6 +69,9 @@
         "scopes": {
           "code:js": [
             "meta.embedded.javascript"
+          ],
+          "code:ts": [
+            "meta.embedded.typescript"
           ]
         }
       }

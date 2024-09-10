@@ -58,7 +58,7 @@ export type CompileAnnotation = (
 export type CompilePass = (
   ast: asts.Ast,
   options: CompileOptions,
-) => void;
+) => asts.Ast;
 
 export type CompilePipeline =
   Partial<
@@ -97,7 +97,7 @@ const passes = {
     generateJS,
     generateTypes,
   },
-};
+} satisfies Record<string, Record<string, CompilePass>>;
 
 const getDefaultPipeline = () => ({
   check: [
@@ -147,12 +147,14 @@ export function compile(ast: asts.Ast, pipeline: CompilePipeline, userOptions: P
   if (options.output === `parser`)
     options.format = `bare`;
 
-  if (options.mode === `tokenizer`)
+  if (options.mode === `tokenizer`) {
     options.parameters.add(`tokenizer`);
+    options.cache = true;
+  }
 
   for (const passes of Object.values(pipeline))
     for (const pass of passes)
-      pass(ast, options);
+      ast = pass(ast, options);
 
   if (!ast.code)
     throw new Error(`Assertion failed: No code generated.`);
